@@ -1,6 +1,41 @@
-import { App, PluginSettingTab, Setting, TextComponent } from "obsidian";
+import { AbstractInputSuggest, App, PluginSettingTab, Setting, TextComponent, TFolder } from "obsidian";
 import type ParaManagerPlugin from "./main";
 import { isNestedPath } from "./utils";
+
+/**
+ * Provides folder autocomplete suggestions for text inputs.
+ * Uses Obsidian's AbstractInputSuggest to show a dropdown of matching folders.
+ */
+class FolderInputSuggest extends AbstractInputSuggest<TFolder> {
+  private textInputEl: HTMLInputElement;
+
+  constructor(app: App, inputEl: HTMLInputElement) {
+    super(app, inputEl);
+    this.textInputEl = inputEl;
+  }
+
+  getSuggestions(inputStr: string): TFolder[] {
+    const folders = this.app.vault.getAllLoadedFiles()
+      .filter((f): f is TFolder => f instanceof TFolder);
+
+    if (!inputStr) return folders;
+
+    const lowerInput = inputStr.toLowerCase();
+    return folders.filter(folder =>
+      folder.path.toLowerCase().includes(lowerInput)
+    );
+  }
+
+  renderSuggestion(folder: TFolder, el: HTMLElement): void {
+    el.setText(folder.path);
+  }
+
+  selectSuggestion(folder: TFolder): void {
+    this.textInputEl.value = folder.path;
+    this.textInputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    this.close();
+  }
+}
 
 export interface ParaManagerSettings {
   projectsPath: string;
@@ -94,6 +129,9 @@ function setupFolderPathInput(
   plugin: ParaManagerPlugin
 ): void {
   const inputEl = text.inputEl;
+
+  // Attach folder autocomplete suggestions
+  new FolderInputSuggest(plugin.app, inputEl);
 
   // Create warning element (hidden by default)
   const warningEl = document.createElement("div");
