@@ -1,17 +1,14 @@
 import { AbstractInputSuggest, App, PluginSettingTab, Setting, TextComponent, TFolder } from "obsidian";
 import type ParaManagerPlugin from "./main";
-import { isNestedPath } from "./utils";
+import { validateParaFolderPath, type ParaFolderField } from "./utils";
 
 /**
  * Provides folder autocomplete suggestions for text inputs.
  * Uses Obsidian's AbstractInputSuggest to show a dropdown of matching folders.
  */
 class FolderInputSuggest extends AbstractInputSuggest<TFolder> {
-  private textInputEl: HTMLInputElement;
-
   constructor(app: App, inputEl: HTMLInputElement) {
     super(app, inputEl);
-    this.textInputEl = inputEl;
   }
 
   getSuggestions(inputStr: string): TFolder[] {
@@ -31,8 +28,7 @@ class FolderInputSuggest extends AbstractInputSuggest<TFolder> {
   }
 
   selectSuggestion(folder: TFolder): void {
-    this.textInputEl.value = folder.path;
-    this.textInputEl.dispatchEvent(new Event("input", { bubbles: true }));
+    this.setValue(folder.path);
     this.close();
   }
 }
@@ -57,17 +53,6 @@ export const DEFAULT_SETTINGS: ParaManagerSettings = {
   projectFolderFormat: "YYYY-MM-DD {{name}}",
 };
 
-/** PARA folder field names for validation */
-type ParaFolderField = "projectsPath" | "areasPath" | "resourcesPath" | "archivePath";
-
-/** Human-readable names for PARA folders */
-const FOLDER_NAMES: Record<ParaFolderField, string> = {
-  projectsPath: "Projects",
-  areasPath: "Areas",
-  resourcesPath: "Resources",
-  archivePath: "Archive",
-};
-
 /** Default values for each folder field */
 const FOLDER_DEFAULTS: Record<ParaFolderField, string> = {
   projectsPath: "Projects",
@@ -75,42 +60,6 @@ const FOLDER_DEFAULTS: Record<ParaFolderField, string> = {
   resourcesPath: "Resources",
   archivePath: "Archive",
 };
-
-/**
- * Validate a PARA folder path against all other PARA paths.
- * Checks for equality and nesting conflicts.
- *
- * @param newPath - The normalized new path value
- * @param field - Which field is being changed
- * @param settings - Current settings to validate against
- * @returns Error message if invalid, null if valid
- */
-function validateParaFolderPath(
-  newPath: string,
-  field: ParaFolderField,
-  settings: ParaManagerSettings
-): string | null {
-  const allFields: ParaFolderField[] = ["projectsPath", "areasPath", "resourcesPath", "archivePath"];
-  const otherFields = allFields.filter((f) => f !== field);
-
-  for (const otherField of otherFields) {
-    const otherPath = settings[otherField];
-    const otherName = FOLDER_NAMES[otherField];
-    const thisName = FOLDER_NAMES[field];
-
-    // Check equality
-    if (newPath === otherPath) {
-      return `${thisName} folder cannot be the same as ${otherName} folder`;
-    }
-
-    // Check nesting
-    if (isNestedPath(newPath, otherPath)) {
-      return `${thisName} folder cannot be nested with ${otherName} folder`;
-    }
-  }
-
-  return null;
-}
 
 /** CSS class for invalid input styling */
 const INVALID_INPUT_CLASS = "para-manager-invalid-input";
@@ -135,10 +84,7 @@ function setupFolderPathInput(
 
   // Create warning element (hidden by default)
   const warningEl = document.createElement("div");
-  warningEl.style.marginTop = "-8px";
-  warningEl.style.marginBottom = "16px";
-  warningEl.style.fontSize = "var(--font-ui-smaller)";
-  warningEl.style.color = "var(--color-yellow)";
+  warningEl.classList.add("para-manager-inline-message");
   warningEl.style.display = "none";
   setting.settingEl.insertAdjacentElement("afterend", warningEl);
 
@@ -151,15 +97,11 @@ function setupFolderPathInput(
     if (!folder) {
       // Show warning state
       inputEl.classList.add(WARNING_INPUT_CLASS);
-      inputEl.style.borderColor = "var(--color-yellow)";
-      inputEl.style.backgroundColor = "rgba(var(--color-yellow-rgb), 0.1)";
       warningEl.textContent = `Folder "${path}" does not exist (will be created automatically)`;
       warningEl.style.display = "block";
     } else {
       // Clear warning state
       inputEl.classList.remove(WARNING_INPUT_CLASS);
-      inputEl.style.borderColor = "";
-      inputEl.style.backgroundColor = "";
       warningEl.style.display = "none";
     }
   };
@@ -182,8 +124,6 @@ function setupFolderPathInput(
       // Show error state (red - more severe than warning)
       inputEl.classList.add(INVALID_INPUT_CLASS);
       inputEl.classList.remove(WARNING_INPUT_CLASS);
-      inputEl.style.borderColor = "var(--text-error)";
-      inputEl.style.backgroundColor = "rgba(var(--color-red-rgb), 0.1)";
       warningEl.textContent = error;
       warningEl.style.color = "var(--text-error)";
       warningEl.style.display = "block";
@@ -192,8 +132,6 @@ function setupFolderPathInput(
       // Clear error styling after reverting and check warning state
       setTimeout(() => {
         inputEl.classList.remove(INVALID_INPUT_CLASS);
-        inputEl.style.borderColor = "";
-        inputEl.style.backgroundColor = "";
         warningEl.style.color = "var(--color-yellow)";
         updateWarningState(plugin.settings[field]);
       }, 100);
@@ -260,9 +198,7 @@ export class ParaManagerSettingTab extends PluginSettingTab {
 
     // Create preview element (will be added below the setting)
     const previewEl = document.createElement("div");
-    previewEl.style.marginTop = "-8px";
-    previewEl.style.marginBottom = "16px";
-    previewEl.style.fontSize = "var(--font-ui-smaller)";
+    previewEl.classList.add("para-manager-inline-message");
     previewEl.style.color = "var(--text-muted)";
 
     formatSetting.addText((text) => {
@@ -281,10 +217,11 @@ export class ParaManagerSettingTab extends PluginSettingTab {
           previewEl.textContent = `Preview: ${result}`;
           previewEl.style.color = "var(--text-muted)";
           inputEl.style.borderColor = "";
+          inputEl.classList.remove(INVALID_INPUT_CLASS);
         } else {
           previewEl.textContent = "Format must contain {{name}}";
           previewEl.style.color = "var(--text-error)";
-          inputEl.style.borderColor = "var(--text-error)";
+          inputEl.classList.add(INVALID_INPUT_CLASS);
         }
 
         return isValid;

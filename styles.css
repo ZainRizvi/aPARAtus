@@ -1,0 +1,29 @@
+/* PARA Manager plugin styles */
+
+/**
+ * Inline message styling for warnings and preview text below settings
+ */
+.para-manager-inline-message {
+  margin-top: -8px;
+  margin-bottom: 16px;
+  font-size: var(--font-ui-smaller);
+  color: var(--color-yellow);
+}
+
+/**
+ * Warning state for input fields (folder doesn't exist)
+ * Yellow border and light yellow background
+ */
+.para-manager-warning-input {
+  border-color: var(--color-yellow) !important;
+  background-color: rgba(var(--color-yellow-rgb), 0.1) !important;
+}
+
+/**
+ * Invalid state for input fields (validation error)
+ * Red border and light red background
+ */
+.para-manager-invalid-input {
+  border-color: var(--text-error) !important;
+  background-color: rgba(var(--color-red-rgb), 0.1) !important;
+}

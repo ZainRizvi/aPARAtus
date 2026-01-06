@@ -7,6 +7,8 @@ import {
   generateArchiveDestination,
   isNestedPath,
   arePathsNested,
+  validateParaFolderPath,
+  type ParaSettings,
 } from "../src/utils";
 
 describe("normalizePathPure", () => {
@@ -302,5 +304,124 @@ describe("arePathsNested", () => {
   it("handles normalized and unnormalized paths", () => {
     const result = arePathsNested(["/Projects/", "Projects"]);
     expect(result).toBeTruthy(); // Same path with different formatting
+  });
+});
+
+describe("validateParaFolderPath", () => {
+  let defaultSettings: ParaSettings;
+
+  beforeEach(() => {
+    defaultSettings = {
+      projectsPath: "Projects",
+      areasPath: "Areas",
+      resourcesPath: "Resources",
+      archivePath: "Archive",
+    };
+  });
+
+  it("returns null for valid non-overlapping paths", () => {
+    const result = validateParaFolderPath("Work", "projectsPath", defaultSettings);
+    expect(result).toBeNull();
+  });
+
+  it("returns null when changing a field to a different non-overlapping path", () => {
+    const result = validateParaFolderPath("NewProjects", "projectsPath", defaultSettings);
+    expect(result).toBeNull();
+  });
+
+  it("returns error when paths are equal (projectsPath)", () => {
+    const result = validateParaFolderPath("Areas", "projectsPath", defaultSettings);
+    expect(result).not.toBeNull();
+    expect(result).toContain("Projects folder cannot be the same as Areas folder");
+  });
+
+  it("returns error when paths are equal (areasPath)", () => {
+    const result = validateParaFolderPath("Resources", "areasPath", defaultSettings);
+    expect(result).not.toBeNull();
+    expect(result).toContain("Areas folder cannot be the same as Resources folder");
+  });
+
+  it("returns error when paths are equal (resourcesPath)", () => {
+    const result = validateParaFolderPath("Archive", "resourcesPath", defaultSettings);
+    expect(result).not.toBeNull();
+    expect(result).toContain("Resources folder cannot be the same as Archive folder");
+  });
+
+  it("returns error when paths are equal (archivePath)", () => {
+    const result = validateParaFolderPath("Projects", "archivePath", defaultSettings);
+    expect(result).not.toBeNull();
+    expect(result).toContain("Archive folder cannot be the same as Projects folder");
+  });
+
+  it("returns error when new path is nested inside another path", () => {
+    const result = validateParaFolderPath("Projects/SubFolder", "areasPath", defaultSettings);
+    expect(result).not.toBeNull();
+    expect(result).toContain("Areas folder cannot be nested with Projects folder");
+  });
+
+  it("returns error when new path is parent of another path", () => {
+    // When trying to set areasPath to "Areas" while projectsPath is "Areas/Projects"
+    defaultSettings.projectsPath = "Areas/Projects";
+    const result = validateParaFolderPath("Areas", "areasPath", defaultSettings);
+    expect(result).not.toBeNull();
+    expect(result).toContain("Areas folder cannot be nested with Projects folder");
+  });
+
+  it("error message includes both folder names", () => {
+    const result = validateParaFolderPath("Projects/Nested", "areasPath", defaultSettings);
+    expect(result).toContain("Areas");
+    expect(result).toContain("Projects");
+  });
+
+  it("error message includes both folder names for equality check", () => {
+    const result = validateParaFolderPath("Resources", "archivePath", defaultSettings);
+    expect(result).toContain("Archive");
+    expect(result).toContain("Resources");
+  });
+
+  it("validates against multiple other paths", () => {
+    // Changing projectsPath to equal one of the other paths should fail
+    const result1 = validateParaFolderPath("Areas", "projectsPath", defaultSettings);
+    expect(result1).not.toBeNull();
+
+    const result2 = validateParaFolderPath("Resources", "projectsPath", defaultSettings);
+    expect(result2).not.toBeNull();
+
+    const result3 = validateParaFolderPath("Archive", "projectsPath", defaultSettings);
+    expect(result3).not.toBeNull();
+  });
+
+  it("allows paths with similar names but different roots", () => {
+    defaultSettings.projectsPath = "Work/Projects";
+    defaultSettings.areasPath = "Work/Areas";
+    const result = validateParaFolderPath("Home/Projects", "resourcesPath", defaultSettings);
+    expect(result).toBeNull();
+  });
+
+  it("catches nesting in deeply nested paths", () => {
+    defaultSettings.projectsPath = "Work/Active/Projects";
+    const result = validateParaFolderPath("Work/Active/Projects/MyProject", "areasPath", defaultSettings);
+    expect(result).not.toBeNull();
+  });
+
+  it("handles field with trailing/leading slashes", () => {
+    // "/Projects/" normalizes to "Projects" which is equal to projectsPath
+    // This is detected as nesting (since isNestedPath returns true for equal paths)
+    const result = validateParaFolderPath("/Projects/", "areasPath", defaultSettings);
+    expect(result).not.toBeNull();
+    // Will be detected as nested since isNestedPath considers equal paths as nested
+    expect(result).toContain("cannot be nested");
+  });
+
+  it("validates only against other fields, not itself", () => {
+    const result = validateParaFolderPath("Projects", "projectsPath", defaultSettings);
+    expect(result).toBeNull(); // No error because we're checking against other fields only
+  });
+
+  it("returns error when any other field fails validation", () => {
+    // Testing that validation checks all fields
+    defaultSettings.areasPath = "Projects/Areas";
+    const result = validateParaFolderPath("Projects", "projectsPath", defaultSettings);
+    expect(result).not.toBeNull();
   });
 });

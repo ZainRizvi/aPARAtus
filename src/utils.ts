@@ -3,6 +3,17 @@
  * These functions have no Obsidian dependencies and are fully testable.
  */
 
+/** PARA folder field names for validation */
+export type ParaFolderField = "projectsPath" | "areasPath" | "resourcesPath" | "archivePath";
+
+/** PARA manager settings structure (minimal interface for validation) */
+export interface ParaSettings {
+  projectsPath: string;
+  areasPath: string;
+  resourcesPath: string;
+  archivePath: string;
+}
+
 /** Maximum collision attempts before throwing an error */
 const MAX_COLLISION_ATTEMPTS = 1000;
 
@@ -168,4 +179,48 @@ export function generateArchiveDestination(
       throw new Error("Too many archive collisions - please clean up your archive folder");
     }
   }
+}
+
+/** Human-readable display names for PARA folders (used in error messages) */
+const FOLDER_DISPLAY_NAMES: Record<ParaFolderField, string> = {
+  projectsPath: "Projects",
+  areasPath: "Areas",
+  resourcesPath: "Resources",
+  archivePath: "Archive",
+};
+
+/**
+ * Validate a PARA folder path against all other PARA paths.
+ * Checks for equality and nesting conflicts.
+ *
+ * @param newPath - The normalized new path value
+ * @param field - Which field is being changed
+ * @param settings - Current settings to validate against
+ * @returns Error message if invalid, null if valid
+ */
+export function validateParaFolderPath(
+  newPath: string,
+  field: ParaFolderField,
+  settings: ParaSettings
+): string | null {
+  const allFields: ParaFolderField[] = ["projectsPath", "areasPath", "resourcesPath", "archivePath"];
+  const otherFields = allFields.filter((f) => f !== field);
+
+  for (const otherField of otherFields) {
+    const otherPath = settings[otherField];
+    const otherName = FOLDER_DISPLAY_NAMES[otherField];
+    const thisName = FOLDER_DISPLAY_NAMES[field];
+
+    // Check equality
+    if (newPath === otherPath) {
+      return `${thisName} folder cannot be the same as ${otherName} folder`;
+    }
+
+    // Check nesting
+    if (isNestedPath(newPath, otherPath)) {
+      return `${thisName} folder cannot be nested with ${otherName} folder`;
+    }
+  }
+
+  return null;
 }
