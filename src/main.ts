@@ -162,10 +162,31 @@ export default class ParaManagerPlugin extends Plugin {
       this.settings.archivePath = DEFAULT_SETTINGS.archivePath;
       await this.saveSettings();
     }
+
   }
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /**
+   * Format a project name using Moment.js date tokens and {{name}} placeholder.
+   * Obsidian exposes moment globally as window.moment.
+   *
+   * @param name - The project name (will replace {{name}} placeholder)
+   * @param format - The format string with Moment.js tokens and {{name}} placeholder
+   * @returns The formatted folder name
+   */
+  private formatProjectName(name: string, format: string): string {
+    // window.moment is globally available in Obsidian - no import needed
+    const now = (window as any).moment();
+
+    // Replace {{name}} with escaped name (square brackets prevent Moment.js interpretation)
+    // e.g., "fruit ball" contains 'a' (AM/PM) and 'll' (localized date) tokens
+    const result = format.replace(/\{\{name\}\}/g, `[${name}]`);
+
+    // Format Moment.js tokens - the name inside [] is preserved literally
+    return now.format(result);
   }
 
   /**
@@ -182,7 +203,14 @@ export default class ParaManagerPlugin extends Plugin {
     itemType: string
   ): Promise<void> {
     const basePath = this.settings[settingsKey];
-    const itemPath = normalizePath(`${basePath}/${name}`);
+
+    // For projects only, apply the folder name format
+    let folderName = name;
+    if (settingsKey === "projectsPath") {
+      folderName = this.formatProjectName(name, this.settings.projectFolderFormat);
+    }
+
+    const itemPath = normalizePath(`${basePath}/${folderName}`);
 
     // Check if folder already exists
     if (this.app.vault.getAbstractFileByPath(itemPath)) {
@@ -197,7 +225,7 @@ export default class ParaManagerPlugin extends Plugin {
       // Create the item folder
       await this.app.vault.createFolder(itemPath);
 
-      // Create index note
+      // Create index note (title uses just the name, not the formatted folder name)
       const indexPath = normalizePath(`${itemPath}/index.md`);
       const indexContent = `# ${name}\n`;
       const file = await this.app.vault.create(indexPath, indexContent);
