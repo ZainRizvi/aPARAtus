@@ -10,7 +10,7 @@ import {
   isTopLevelProjectFolder,
   arePathsNested,
 } from "./utils";
-import { ArchiveConfirmModal } from "./modals";
+import { ArchiveConfirmModal, NameInputModal } from "./modals";
 import { ensureFolderExists, getExistingPaths, focusFolder } from "./folder-ops";
 
 /** Maximum retries for rename operation on collision */
@@ -26,7 +26,7 @@ export default class ParaManagerPlugin extends Plugin {
     // Add settings tab
     this.addSettingTab(new ParaManagerSettingTab(this.app, this));
 
-    // Register command palette command
+    // Register command palette commands
     this.addCommand({
       id: "archive-item",
       name: "Archive Item",
@@ -45,6 +45,45 @@ export default class ParaManagerPlugin extends Plugin {
           this.archiveItem(topLevelItem);
         }
         return true;
+      },
+    });
+
+    this.addCommand({
+      id: "create-project",
+      name: "Create Project",
+      callback: () => {
+        new NameInputModal(
+          this.app,
+          "Create Project",
+          "Project name",
+          (name) => this.createParaItem(name, "projectsPath", "Project")
+        ).open();
+      },
+    });
+
+    this.addCommand({
+      id: "create-area",
+      name: "Create Area",
+      callback: () => {
+        new NameInputModal(
+          this.app,
+          "Create Area",
+          "Area name",
+          (name) => this.createParaItem(name, "areasPath", "Area")
+        ).open();
+      },
+    });
+
+    this.addCommand({
+      id: "create-resource",
+      name: "Create Resource",
+      callback: () => {
+        new NameInputModal(
+          this.app,
+          "Create Resource",
+          "Resource name",
+          (name) => this.createParaItem(name, "resourcesPath", "Resource")
+        ).open();
       },
     });
 
@@ -127,6 +166,51 @@ export default class ParaManagerPlugin extends Plugin {
 
   async saveSettings(): Promise<void> {
     await this.saveData(this.settings);
+  }
+
+  /**
+   * Create a new PARA item (Project, Area, or Resource).
+   * Creates a folder and an index note inside it, then opens the note.
+   *
+   * @param name - The name for the new item
+   * @param settingsKey - Which settings path to use (projectsPath, areasPath, resourcesPath)
+   * @param itemType - Human-readable type for messages (Project, Area, Resource)
+   */
+  private async createParaItem(
+    name: string,
+    settingsKey: "projectsPath" | "areasPath" | "resourcesPath",
+    itemType: string
+  ): Promise<void> {
+    const basePath = this.settings[settingsKey];
+    const itemPath = normalizePath(`${basePath}/${name}`);
+
+    // Check if folder already exists
+    if (this.app.vault.getAbstractFileByPath(itemPath)) {
+      new Notice(`${itemType} "${name}" already exists`);
+      return;
+    }
+
+    try {
+      // Ensure parent folder exists
+      await ensureFolderExists(this.app, basePath);
+
+      // Create the item folder
+      await this.app.vault.createFolder(itemPath);
+
+      // Create index note
+      const indexPath = normalizePath(`${itemPath}/index.md`);
+      const indexContent = `# ${name}\n`;
+      const file = await this.app.vault.create(indexPath, indexContent);
+
+      // Open the note
+      await this.app.workspace.getLeaf().openFile(file);
+
+      new Notice(`Created ${itemType.toLowerCase()} "${name}"`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Unknown error";
+      new Notice(`Failed to create ${itemType.toLowerCase()}: ${message}`);
+      console.error(`PARA Manager: Failed to create ${itemType}`, error);
+    }
   }
 
   /**
