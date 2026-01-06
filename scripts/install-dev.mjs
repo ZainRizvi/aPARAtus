@@ -21,7 +21,7 @@ const projectRoot = join(__dirname, "..");
 
 // Default vault path - override with OBSIDIAN_TEST_VAULT env var
 const DEFAULT_VAULT = process.env.OBSIDIAN_TEST_VAULT || "/Users/zain/test/PluginDev/TEST_Vault";
-const PLUGIN_ID = "archive-project";
+const PLUGIN_ID = "para-manager";
 
 // Files to copy
 const FILES_TO_COPY = ["manifest.json", "main.js"];

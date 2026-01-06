@@ -34,7 +34,7 @@ export class ArchiveConfirmModal extends Modal {
     const { contentEl } = this;
     contentEl.createEl("h2", { text: "Archive Item?" });
     contentEl.createEl("p", { text: `Move "${this.itemName}" to:` });
-    contentEl.createEl("p", { text: this.destPath, cls: "archive-dest-path" });
+    contentEl.createEl("p", { text: this.destPath });
 
     const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
 

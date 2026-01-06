@@ -23,7 +23,7 @@
     "areas",
     "resources"
   ],
-  "author": "Zain Ali",
+  "author": "ZainRizvi.io",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.10.0",
