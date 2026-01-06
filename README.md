@@ -31,6 +31,7 @@ Open Settings > Archive Project to configure:
 | Projects folder | `Projects` | Path to your top-level projects folder |
 | Archive folder | `Archive` | Where archived projects are moved |
 | Focus after archive | `true` | Return focus to Projects folder after archiving |
+| Confirm before archive | `false` | Show confirmation dialog before archiving |
 
 ## Usage
 
@@ -94,6 +95,12 @@ npm install
    npm run install:dev -- --vault "/path/to/your/vault"
    ```
 
+   Or set the OBSIDIAN_TEST_VAULT environment variable:
+   ```bash
+   export OBSIDIAN_TEST_VAULT="/path/to/your/vault"
+   npm run install:dev
+   ```
+
 3. In Obsidian:
    - Enable Community plugins (if not already)
    - Enable "Archive Project" plugin
@@ -125,7 +132,7 @@ After installing, verify these behaviors in Obsidian:
 - [ ] Right-click `Projects/TestProject/` → "Archive it" appears
 - [ ] Right-click `Projects/` itself → "Archive it" does NOT appear
 - [ ] Right-click `Projects/TestProject/SubFolder/` → "Archive it" does NOT appear
-- [ ] Right-click a file → "Archive it" does NOT appear
+- [ ] Right-click a file in Projects/ → "Archive it" appears (files can be archived too)
 
 ### Archive Behavior
 - [ ] Click "Archive it" → folder moves to `Archive/TestProject/`

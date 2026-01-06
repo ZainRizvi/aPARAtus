@@ -38,6 +38,7 @@ export class ArchiveProjectSettingTab extends PluginSettingTab {
             const normalized = value.trim().replace(/\/+$/, "") || "Projects";
             if (normalized === this.plugin.settings.archivePath) {
               new Notice("Projects folder cannot be the same as Archive folder");
+              text.setValue(this.plugin.settings.projectsPath);
               return;
             }
             this.plugin.settings.projectsPath = normalized;
@@ -56,6 +57,7 @@ export class ArchiveProjectSettingTab extends PluginSettingTab {
             const normalized = value.trim().replace(/\/+$/, "") || "Archive";
             if (normalized === this.plugin.settings.projectsPath) {
               new Notice("Archive folder cannot be the same as Projects folder");
+              text.setValue(this.plugin.settings.archivePath);
               return;
             }
             this.plugin.settings.archivePath = normalized;

@@ -20,7 +20,7 @@
     "archive",
     "projects"
   ],
-  "author": "",
+  "author": "Zain Ali",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^20.10.0",

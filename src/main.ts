@@ -62,6 +62,9 @@ class ArchiveConfirmModal extends Modal {
         this.confirmed = true;
         this.onConfirm();
         this.close();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        this.close();
       }
     };
     contentEl.addEventListener("keydown", handleKeydown);

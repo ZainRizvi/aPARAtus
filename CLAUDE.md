@@ -24,12 +24,16 @@ archive-project/
 │   └── install-dev.mjs   # Dev installation script
 ├── tests/
 │   └── utils.test.ts     # Unit tests for pure functions
+├── .beads/               # BD task tracking database
 ├── manifest.json         # Obsidian plugin manifest
 ├── versions.json         # Version compatibility mapping
 ├── package.json
 ├── tsconfig.json
 ├── eslint.config.mjs
 ├── esbuild.config.mjs
+├── vitest.config.ts
+├── CLAUDE.md
+├── AGENTS.md
 └── README.md
 ```
 

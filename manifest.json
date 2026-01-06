@@ -4,7 +4,7 @@
   "version": "1.0.0",
   "minAppVersion": "1.0.0",
   "description": "Archive top-level project folders with a right-click context menu. PARA-aware.",
-  "author": "",
+  "author": "Zain Ali",
   "authorUrl": "",
   "isDesktopOnly": false
 }

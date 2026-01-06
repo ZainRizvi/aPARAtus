@@ -130,10 +130,12 @@ describe("getFolderName", () => {
 });
 
 describe("generateArchiveDestination", () => {
+  const TEST_DATE = "2024-03-15";
+
   beforeEach(() => {
     // Mock Date to return a fixed date
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2024-03-15T12:00:00Z"));
+    vi.setSystemTime(new Date(`${TEST_DATE}T12:00:00Z`));
   });
 
   afterEach(() => {
@@ -157,35 +159,35 @@ describe("generateArchiveDestination", () => {
       "MyProject",
       existingPaths
     );
-    expect(result).toBe("Archive/MyProject (Archived 2024-03-15)");
+    expect(result).toBe(`Archive/MyProject (Archived ${TEST_DATE})`);
   });
 
   it("adds counter when date-suffixed destination exists", () => {
     const existingPaths = new Set([
       "Archive/MyProject",
-      "Archive/MyProject (Archived 2024-03-15)",
+      `Archive/MyProject (Archived ${TEST_DATE})`,
     ]);
     const result = generateArchiveDestination(
       "Archive",
       "MyProject",
       existingPaths
     );
-    expect(result).toBe("Archive/MyProject (Archived 2024-03-15) (2)");
+    expect(result).toBe(`Archive/MyProject (Archived ${TEST_DATE}) (2)`);
   });
 
   it("increments counter for multiple collisions", () => {
     const existingPaths = new Set([
       "Archive/MyProject",
-      "Archive/MyProject (Archived 2024-03-15)",
-      "Archive/MyProject (Archived 2024-03-15) (2)",
-      "Archive/MyProject (Archived 2024-03-15) (3)",
+      `Archive/MyProject (Archived ${TEST_DATE})`,
+      `Archive/MyProject (Archived ${TEST_DATE}) (2)`,
+      `Archive/MyProject (Archived ${TEST_DATE}) (3)`,
     ]);
     const result = generateArchiveDestination(
       "Archive",
       "MyProject",
       existingPaths
     );
-    expect(result).toBe("Archive/MyProject (Archived 2024-03-15) (4)");
+    expect(result).toBe(`Archive/MyProject (Archived ${TEST_DATE}) (4)`);
   });
 
   it("normalizes archive path", () => {
