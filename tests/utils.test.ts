@@ -3,7 +3,7 @@ import {
   normalizePathPure,
   getParentPath,
   isTopLevelProjectFolder,
-  getFolderName,
+  getItemName,
   generateArchiveDestination,
 } from "../src/utils";
 
@@ -110,22 +110,22 @@ describe("isTopLevelProjectFolder", () => {
   });
 });
 
-describe("getFolderName", () => {
+describe("getItemName", () => {
   it("returns folder name from path", () => {
-    expect(getFolderName("Projects/MyProject")).toBe("MyProject");
-    expect(getFolderName("Archive/OldStuff")).toBe("OldStuff");
+    expect(getItemName("Projects/MyProject")).toBe("MyProject");
+    expect(getItemName("Archive/OldStuff")).toBe("OldStuff");
   });
 
   it("returns the path itself for root-level folders", () => {
-    expect(getFolderName("Projects")).toBe("Projects");
+    expect(getItemName("Projects")).toBe("Projects");
   });
 
   it("handles paths with trailing slashes", () => {
-    expect(getFolderName("Projects/MyProject/")).toBe("MyProject");
+    expect(getItemName("Projects/MyProject/")).toBe("MyProject");
   });
 
   it("handles deeply nested paths", () => {
-    expect(getFolderName("A/B/C/D/E")).toBe("E");
+    expect(getItemName("A/B/C/D/E")).toBe("E");
   });
 });
 

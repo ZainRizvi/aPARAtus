@@ -3,6 +3,8 @@ import type ArchiveProjectPlugin from "./main";
 
 export interface ArchiveProjectSettings {
   projectsPath: string;
+  areasPath: string;
+  resourcesPath: string;
   archivePath: string;
   focusAfterArchive: boolean;
   confirmBeforeArchive: boolean;
@@ -10,6 +12,8 @@ export interface ArchiveProjectSettings {
 
 export const DEFAULT_SETTINGS: ArchiveProjectSettings = {
   projectsPath: "Projects",
+  areasPath: "Areas",
+  resourcesPath: "Resources",
   archivePath: "Archive",
   focusAfterArchive: true,
   confirmBeforeArchive: false,
@@ -41,14 +45,82 @@ export class ArchiveProjectSettingTab extends PluginSettingTab {
               text.setValue(this.plugin.settings.projectsPath);
               return;
             }
+            if (normalized === this.plugin.settings.areasPath) {
+              new Notice("Projects folder cannot be the same as Areas folder");
+              text.setValue(this.plugin.settings.projectsPath);
+              return;
+            }
+            if (normalized === this.plugin.settings.resourcesPath) {
+              new Notice("Projects folder cannot be the same as Resources folder");
+              text.setValue(this.plugin.settings.projectsPath);
+              return;
+            }
             this.plugin.settings.projectsPath = normalized;
             await this.plugin.saveSettings();
           })
       );
 
     new Setting(containerEl)
+      .setName("Areas folder")
+      .setDesc("Path to your Areas folder (top-level area folders live here)")
+      .addText((text) =>
+        text
+          .setPlaceholder("Areas")
+          .setValue(this.plugin.settings.areasPath)
+          .onChange(async (value) => {
+            const normalized = value.trim().replace(/\/+$/, "") || "Areas";
+            if (normalized === this.plugin.settings.archivePath) {
+              new Notice("Areas folder cannot be the same as Archive folder");
+              text.setValue(this.plugin.settings.areasPath);
+              return;
+            }
+            if (normalized === this.plugin.settings.projectsPath) {
+              new Notice("Areas folder cannot be the same as Projects folder");
+              text.setValue(this.plugin.settings.areasPath);
+              return;
+            }
+            if (normalized === this.plugin.settings.resourcesPath) {
+              new Notice("Areas folder cannot be the same as Resources folder");
+              text.setValue(this.plugin.settings.areasPath);
+              return;
+            }
+            this.plugin.settings.areasPath = normalized;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
+      .setName("Resources folder")
+      .setDesc("Path to your Resources folder (top-level resource folders live here)")
+      .addText((text) =>
+        text
+          .setPlaceholder("Resources")
+          .setValue(this.plugin.settings.resourcesPath)
+          .onChange(async (value) => {
+            const normalized = value.trim().replace(/\/+$/, "") || "Resources";
+            if (normalized === this.plugin.settings.archivePath) {
+              new Notice("Resources folder cannot be the same as Archive folder");
+              text.setValue(this.plugin.settings.resourcesPath);
+              return;
+            }
+            if (normalized === this.plugin.settings.projectsPath) {
+              new Notice("Resources folder cannot be the same as Projects folder");
+              text.setValue(this.plugin.settings.resourcesPath);
+              return;
+            }
+            if (normalized === this.plugin.settings.areasPath) {
+              new Notice("Resources folder cannot be the same as Areas folder");
+              text.setValue(this.plugin.settings.resourcesPath);
+              return;
+            }
+            this.plugin.settings.resourcesPath = normalized;
+            await this.plugin.saveSettings();
+          })
+      );
+
+    new Setting(containerEl)
       .setName("Archive folder")
-      .setDesc("Path where archived projects will be moved")
+      .setDesc("Path where archived items will be moved")
       .addText((text) =>
         text
           .setPlaceholder("Archive")
@@ -57,6 +129,16 @@ export class ArchiveProjectSettingTab extends PluginSettingTab {
             const normalized = value.trim().replace(/\/+$/, "") || "Archive";
             if (normalized === this.plugin.settings.projectsPath) {
               new Notice("Archive folder cannot be the same as Projects folder");
+              text.setValue(this.plugin.settings.archivePath);
+              return;
+            }
+            if (normalized === this.plugin.settings.areasPath) {
+              new Notice("Archive folder cannot be the same as Areas folder");
+              text.setValue(this.plugin.settings.archivePath);
+              return;
+            }
+            if (normalized === this.plugin.settings.resourcesPath) {
+              new Notice("Archive folder cannot be the same as Resources folder");
               text.setValue(this.plugin.settings.archivePath);
               return;
             }

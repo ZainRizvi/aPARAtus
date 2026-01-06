@@ -6,7 +6,7 @@ import {
 } from "./settings";
 import {
   generateArchiveDestination,
-  getFolderName,
+  getItemName,
   isTopLevelProjectFolder,
 } from "./utils";
 
@@ -19,6 +19,7 @@ class ArchiveConfirmModal extends Modal {
   private onConfirm: () => void;
   private onCancel: () => void;
   private confirmed = false;
+  private keydownHandler?: (e: KeyboardEvent) => void;
 
   constructor(
     app: App,
@@ -56,7 +57,7 @@ class ArchiveConfirmModal extends Modal {
     confirmBtn.focus();
 
     // Handle Enter key to confirm
-    const handleKeydown = (e: KeyboardEvent) => {
+    this.keydownHandler = (e: KeyboardEvent) => {
       if (e.key === "Enter" && !e.isComposing) {
         e.preventDefault();
         this.confirmed = true;
@@ -67,11 +68,14 @@ class ArchiveConfirmModal extends Modal {
         this.close();
       }
     };
-    contentEl.addEventListener("keydown", handleKeydown);
+    contentEl.addEventListener("keydown", this.keydownHandler);
   }
 
   onClose() {
     const { contentEl } = this;
+    if (this.keydownHandler) {
+      contentEl.removeEventListener("keydown", this.keydownHandler);
+    }
     contentEl.empty();
     if (!this.confirmed) {
       this.onCancel();
@@ -81,6 +85,7 @@ class ArchiveConfirmModal extends Modal {
 
 export default class ArchiveProjectPlugin extends Plugin {
   settings: ArchiveProjectSettings = DEFAULT_SETTINGS;
+  private archivingItems = new Set<string>();
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -96,9 +101,13 @@ export default class ArchiveProjectPlugin extends Plugin {
           return;
         }
 
-        // Only show for direct children of projectsPath
-        const projectsPath = normalizePath(this.settings.projectsPath);
-        if (!isTopLevelProjectFolder(file.path, projectsPath)) {
+        // Only show for direct children of any source folder (Projects, Areas, Resources)
+        const sourceFolders = this.getSourceFolders();
+        const isArchivable = sourceFolders.some(srcPath =>
+          isTopLevelProjectFolder(file.path, srcPath)
+        );
+
+        if (!isArchivable) {
           return;
         }
 
@@ -118,10 +127,27 @@ export default class ArchiveProjectPlugin extends Plugin {
     this.settings = Object.assign({}, DEFAULT_SETTINGS, await this.loadData());
 
     // Validate loaded settings - catch invalid manual edits to data.json
-    if (this.settings.projectsPath === this.settings.archivePath) {
-      new Notice("Archive Project: Invalid settings detected (paths match), resetting to defaults");
+    const sourceFolders = this.getSourceFolders();
+    const archivePath = normalizePath(this.settings.archivePath);
+
+    // Check if archive path matches any source folder
+    if (sourceFolders.includes(archivePath)) {
+      new Notice("Archive Project: Invalid settings detected (archive matches source folder), resetting to defaults");
       this.settings.projectsPath = DEFAULT_SETTINGS.projectsPath;
+      this.settings.areasPath = DEFAULT_SETTINGS.areasPath;
+      this.settings.resourcesPath = DEFAULT_SETTINGS.resourcesPath;
       this.settings.archivePath = DEFAULT_SETTINGS.archivePath;
+      await this.saveSettings();
+      return;
+    }
+
+    // Check if source folders match each other
+    const uniqueFolders = new Set(sourceFolders);
+    if (uniqueFolders.size !== sourceFolders.length) {
+      new Notice("Archive Project: Invalid settings detected (source folders match), resetting to defaults");
+      this.settings.projectsPath = DEFAULT_SETTINGS.projectsPath;
+      this.settings.areasPath = DEFAULT_SETTINGS.areasPath;
+      this.settings.resourcesPath = DEFAULT_SETTINGS.resourcesPath;
       await this.saveSettings();
     }
   }
@@ -131,16 +157,41 @@ export default class ArchiveProjectPlugin extends Plugin {
   }
 
   /**
+   * Get all source folders as normalized paths.
+   * Returns an array of all PARA component source folders (Projects, Areas, Resources).
+   */
+  private getSourceFolders(): string[] {
+    return [
+      normalizePath(this.settings.projectsPath),
+      normalizePath(this.settings.areasPath),
+      normalizePath(this.settings.resourcesPath),
+    ];
+  }
+
+  /**
    * Archive an item (file or folder) by moving it to the archive path.
    * Shows a confirmation dialog if enabled in settings.
    * Uses retry logic to handle case-sensitivity differences across filesystems.
+   * After archiving, focuses on the source folder the item was from.
    */
   async archiveItem(item: TAbstractFile): Promise<void> {
+    // Prevent double-click race condition
+    if (this.archivingItems.has(item.path)) {
+      return; // Already archiving this item
+    }
+    this.archivingItems.add(item.path);
+
     // Re-normalize paths for defense-in-depth (settings may come from older plugin versions)
     const archivePath = normalizePath(this.settings.archivePath);
-    const itemName = getFolderName(item.path);
+    const itemName = getItemName(item.path);
 
     try {
+      // Determine which source folder this item is in
+      const sourceFolders = this.getSourceFolders();
+      const sourceFolder = sourceFolders.find(src =>
+        isTopLevelProjectFolder(item.path, src)
+      );
+
       // Ensure archive folder exists
       await this.ensureFolderExists(archivePath);
 
@@ -162,27 +213,36 @@ export default class ArchiveProjectPlugin extends Plugin {
             itemName,
             destPath,
             async () => {
-              await this.performArchive(item, destPath, itemName, archivePath);
+              await this.performArchive(item, destPath, itemName, archivePath, sourceFolder);
               resolve();
             },
             () => resolve() // onCancel - just resolve without archiving
           ).open();
         });
       } else {
-        await this.performArchive(item, destPath, itemName, archivePath);
+        await this.performArchive(item, destPath, itemName, archivePath, sourceFolder);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
       new Notice(`Failed to archive "${itemName}": ${message}`);
       console.error("Archive Project: Failed to archive item", error);
+    } finally {
+      this.archivingItems.delete(item.path);
     }
   }
 
   /**
    * Perform the actual archive operation.
    * Called either directly or after confirmation dialog is accepted.
+   * After successful archive, focuses on the source folder.
+   *
+   * @param item - The item being archived
+   * @param destPath - The destination path for the archive
+   * @param itemName - The name of the item
+   * @param archivePath - The archive folder path
+   * @param sourceFolder - The source folder the item is from (Projects, Areas, or Resources)
    */
-  private async performArchive(item: TAbstractFile, destPath: string, itemName: string, archivePath: string): Promise<void> {
+  private async performArchive(item: TAbstractFile, destPath: string, itemName: string, archivePath: string, sourceFolder?: string): Promise<void> {
     const originalDestPath = destPath; // Track original path
 
     // Move the item with retry logic for filesystem case-sensitivity edge cases
@@ -211,9 +271,9 @@ export default class ArchiveProjectPlugin extends Plugin {
       new Notice(`Archived "${itemName}" to ${destPath}`);
     }
 
-    // Focus back on projects folder if enabled
-    if (this.settings.focusAfterArchive) {
-      await this.focusProjectsFolder();
+    // Focus back on source folder if enabled
+    if (this.settings.focusAfterArchive && sourceFolder) {
+      await this.focusSourceFolder(sourceFolder);
     }
   }
 
@@ -246,18 +306,20 @@ export default class ArchiveProjectPlugin extends Plugin {
   }
 
   /**
-   * Focus the file explorer on the projects folder.
+   * Focus the file explorer on a source folder (Projects, Areas, or Resources).
    * Best-effort: logs errors but doesn't notify user since archive succeeded.
+   *
+   * @param sourcePath - The path to the source folder to focus on
    *
    * WARNING: Uses undocumented internal Obsidian API (revealInFolder).
    * Tested on Obsidian 1.7.x. May break in future versions.
    * If it breaks, the archive still succeeds - only the focus feature fails.
    */
-  private async focusProjectsFolder(): Promise<void> {
-    const projectsPath = normalizePath(this.settings.projectsPath);
-    const projectsFolder = this.app.vault.getAbstractFileByPath(projectsPath);
+  private async focusSourceFolder(sourcePath: string): Promise<void> {
+    const normalizedPath = normalizePath(sourcePath);
+    const sourceFolder = this.app.vault.getAbstractFileByPath(normalizedPath);
 
-    if (!projectsFolder) {
+    if (!sourceFolder) {
       return;
     }
 
@@ -275,11 +337,11 @@ export default class ArchiveProjectPlugin extends Plugin {
       };
 
       if (typeof fileExplorerView.revealInFolder === "function") {
-        fileExplorerView.revealInFolder(projectsFolder as TAbstractFile);
+        fileExplorerView.revealInFolder(sourceFolder as TAbstractFile);
       }
     } catch (error) {
       // Best-effort: log for debugging but don't bother user (archive succeeded)
-      console.debug("Archive Project: Could not focus Projects folder", error);
+      console.debug("Archive Project: Could not focus source folder", error);
     }
   }
 }

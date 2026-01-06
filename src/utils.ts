@@ -55,9 +55,9 @@ export function isTopLevelProjectFolder(
 }
 
 /**
- * Get the folder name from a path.
+ * Get the item name (file or folder) from a path.
  */
-export function getFolderName(folderPath: string): string {
+export function getItemName(folderPath: string): string {
   const normalized = normalizePathPure(folderPath);
   const lastSlash = normalized.lastIndexOf("/");
   if (lastSlash === -1) {
