@@ -7,7 +7,7 @@ An Obsidian plugin that adds a right-click context menu to archive top-level pro
 - **Context Menu Integration**: Right-click any top-level project folder to see "Archive it" option
 - **PARA-Aware**: Only shows on direct children of your configured Projects folder
 - **Smart Naming**: Handles destination collisions with date suffixes and counters
-- **Focus Management**: Optionally returns focus to Projects folder after archiving
+- **Focus Management**: Optionally returns focus to the source folder after archiving
 
 ## Installation
 
@@ -30,7 +30,7 @@ Open Settings > Archive Project to configure:
 |---------|---------|-------------|
 | Projects folder | `Projects` | Path to your top-level projects folder |
 | Archive folder | `Archive` | Where archived projects are moved |
-| Focus after archive | `true` | Return focus to Projects folder after archiving |
+| Focus after archive | `true` | Return focus to the source folder (Projects, Areas, or Resources) after archiving |
 | Confirm before archive | `false` | Show confirmation dialog before archiving |
 
 ## Usage
@@ -137,7 +137,7 @@ After installing, verify these behaviors in Obsidian:
 ### Archive Behavior
 - [ ] Click "Archive it" → folder moves to `Archive/TestProject/`
 - [ ] Notice appears: "Archived 'TestProject' to Archive/TestProject"
-- [ ] Focus returns to Projects folder (if setting enabled)
+- [ ] Focus returns to source folder (if setting enabled)
 
 ### Collision Handling
 - [ ] Archive same-named project again → creates `Archive/TestProject (Archived YYYY-MM-DD)`

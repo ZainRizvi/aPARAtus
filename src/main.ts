@@ -8,6 +8,7 @@ import {
   generateArchiveDestination,
   getItemName,
   isTopLevelProjectFolder,
+  arePathsNested,
 } from "./utils";
 
 /** Maximum retries for rename operation on collision */
@@ -93,6 +94,28 @@ export default class ArchiveProjectPlugin extends Plugin {
     // Add settings tab
     this.addSettingTab(new ArchiveProjectSettingTab(this.app, this));
 
+    // Register command palette command
+    this.addCommand({
+      id: "archive-item",
+      name: "Archive Item",
+      checkCallback: (checking: boolean) => {
+        const activeFile = this.app.workspace.getActiveFile();
+        if (!activeFile) {
+          return false;
+        }
+
+        const topLevelItem = this.findTopLevelItem(activeFile);
+        if (!topLevelItem) {
+          return false;
+        }
+
+        if (!checking) {
+          this.archiveItem(topLevelItem);
+        }
+        return true;
+      },
+    });
+
     // Register context menu item for file explorer
     this.registerEvent(
       this.app.workspace.on("file-menu", (menu, file) => {
@@ -149,6 +172,24 @@ export default class ArchiveProjectPlugin extends Plugin {
       this.settings.areasPath = DEFAULT_SETTINGS.areasPath;
       this.settings.resourcesPath = DEFAULT_SETTINGS.resourcesPath;
       await this.saveSettings();
+      return;
+    }
+
+    // Check if any PARA folders are nested within each other
+    const allPaths = [
+      this.settings.projectsPath,
+      this.settings.areasPath,
+      this.settings.resourcesPath,
+      this.settings.archivePath,
+    ];
+    const nestedError = arePathsNested(allPaths);
+    if (nestedError) {
+      new Notice(`Archive Project: Invalid settings detected (${nestedError}), resetting to defaults`);
+      this.settings.projectsPath = DEFAULT_SETTINGS.projectsPath;
+      this.settings.areasPath = DEFAULT_SETTINGS.areasPath;
+      this.settings.resourcesPath = DEFAULT_SETTINGS.resourcesPath;
+      this.settings.archivePath = DEFAULT_SETTINGS.archivePath;
+      await this.saveSettings();
     }
   }
 
@@ -166,6 +207,34 @@ export default class ArchiveProjectPlugin extends Plugin {
       normalizePath(this.settings.areasPath),
       normalizePath(this.settings.resourcesPath),
     ];
+  }
+
+  /**
+   * Find the top-level PARA item (file or folder) for the given file.
+   * Walks up the directory tree to find a direct child of any source folder.
+   * If the file itself is a direct child of a source folder, returns the file.
+   * Returns null if file is not inside a PARA source folder.
+   *
+   * @param file - The file to find the top-level item for
+   * @returns The top-level item, or null if not in a PARA source folder
+   */
+  private findTopLevelItem(file: TFile): TAbstractFile | null {
+    const sourceFolders = this.getSourceFolders();
+
+    // Check if the file itself is a direct child of a source folder
+    if (sourceFolders.some(src => isTopLevelProjectFolder(file.path, src))) {
+      return file;
+    }
+
+    // Walk up to find the top-level folder
+    let current = file.parent;
+    while (current) {
+      if (sourceFolders.some(src => isTopLevelProjectFolder(current!.path, src))) {
+        return current;
+      }
+      current = current.parent;
+    }
+    return null;
   }
 
   /**
@@ -192,15 +261,26 @@ export default class ArchiveProjectPlugin extends Plugin {
         isTopLevelProjectFolder(item.path, src)
       );
 
+      // Extract the source folder name (e.g., "Projects" from "Projects" or "My Projects" from "Work/My Projects")
+      // This is used to create subfolders within the Archive for organization
+      const sourceFolderName = sourceFolder ? getItemName(sourceFolder) : "";
+
       // Ensure archive folder exists
       await this.ensureFolderExists(archivePath);
 
-      // Get all existing folders in archive to check for collisions
-      const existingPaths = this.getExistingArchivePaths(archivePath);
+      // Create subfolder within archive that matches source folder name
+      // e.g., Archive/Projects, Archive/Areas, Archive/Resources, or Archive/My Projects
+      const archiveSubfolder = sourceFolderName
+        ? normalizePath(`${archivePath}/${sourceFolderName}`)
+        : archivePath;
+      await this.ensureFolderExists(archiveSubfolder);
 
-      // Generate unique destination path
+      // Get all existing folders in the subfolder to check for collisions
+      const existingPaths = this.getExistingArchivePaths(archiveSubfolder);
+
+      // Generate unique destination path within the subfolder
       const destPath = generateArchiveDestination(
-        archivePath,
+        archiveSubfolder,
         itemName,
         existingPaths
       );
@@ -213,14 +293,14 @@ export default class ArchiveProjectPlugin extends Plugin {
             itemName,
             destPath,
             async () => {
-              await this.performArchive(item, destPath, itemName, archivePath, sourceFolder);
+              await this.performArchive(item, destPath, itemName, archiveSubfolder, sourceFolder);
               resolve();
             },
             () => resolve() // onCancel - just resolve without archiving
           ).open();
         });
       } else {
-        await this.performArchive(item, destPath, itemName, archivePath, sourceFolder);
+        await this.performArchive(item, destPath, itemName, archiveSubfolder, sourceFolder);
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : "Unknown error";
@@ -239,15 +319,24 @@ export default class ArchiveProjectPlugin extends Plugin {
    * @param item - The item being archived
    * @param destPath - The destination path for the archive
    * @param itemName - The name of the item
-   * @param archivePath - The archive folder path
+   * @param archiveSubfolder - The archive subfolder path (e.g., Archive/Projects)
    * @param sourceFolder - The source folder the item is from (Projects, Areas, or Resources)
    */
-  private async performArchive(item: TAbstractFile, destPath: string, itemName: string, archivePath: string, sourceFolder?: string): Promise<void> {
+  private async performArchive(item: TAbstractFile, destPath: string, itemName: string, archiveSubfolder: string, sourceFolder?: string): Promise<void> {
     const originalDestPath = destPath; // Track original path
 
     // Move the item with retry logic for filesystem case-sensitivity edge cases
     // On macOS/Windows (case-insensitive), collision detection might miss case variants
     // If rename fails, assume collision and retry with updated paths
+    //
+    // DESIGN DECISION: We treat all vault.rename errors as potential collisions and retry,
+    // rather than checking specific error types. This is intentional:
+    // - Obsidian doesn't document error types well, making type-checking unreliable
+    // - Non-collision errors (permissions, disk full, path too long) fail consistently
+    //   across all 3 retries anyway - users see the final error in the notice
+    // - 3 retries is cheap (milliseconds), so defense-in-depth retry is a reasonable tradeoff
+    // - The collision detection catches most cases; retry handles edge cases on case-insensitive
+    //   filesystems (like macOS/Windows) where filesystem case variants can conflict
     for (let attempt = 0; attempt < MAX_RENAME_RETRIES; attempt++) {
       try {
         await this.app.vault.rename(item, destPath);
@@ -257,10 +346,10 @@ export default class ArchiveProjectPlugin extends Plugin {
           throw renameError; // Final attempt failed, propagate error
         }
         // Assume collision due to case-insensitive filesystem - refresh and retry
-        const refreshedPaths = this.getExistingArchivePaths(archivePath);
+        const refreshedPaths = this.getExistingArchivePaths(archiveSubfolder);
         // Add the failed path to force a new name (handles case-insensitive match)
         refreshedPaths.add(destPath);
-        destPath = generateArchiveDestination(archivePath, itemName, refreshedPaths);
+        destPath = generateArchiveDestination(archiveSubfolder, itemName, refreshedPaths);
       }
     }
 
@@ -278,14 +367,40 @@ export default class ArchiveProjectPlugin extends Plugin {
   }
 
   /**
-   * Ensure a folder exists, creating it if necessary.
+   * Ensure a folder exists, creating it and any parent directories if necessary.
+   * Handles deeply nested archive paths by recursively creating parents.
+   * @throws If an intermediate path exists as a file rather than a folder.
    */
   private async ensureFolderExists(folderPath: string): Promise<void> {
-    const folder = this.app.vault.getAbstractFileByPath(folderPath);
-    if (!folder) {
-      await this.app.vault.createFolder(folderPath);
-    } else if (!(folder instanceof TFolder)) {
-      throw new Error(`"${folderPath}" exists but is not a folder`);
+    const normalizedPath = normalizePath(folderPath);
+    const folder = this.app.vault.getAbstractFileByPath(normalizedPath);
+
+    if (folder) {
+      // Path already exists - verify it's a folder, not a file
+      if (!(folder instanceof TFolder)) {
+        throw new Error(`"${normalizedPath}" exists but is not a folder`);
+      }
+      return;
+    }
+
+    // Split path into segments and create each parent if needed
+    const segments = normalizedPath.split("/").filter(Boolean);
+
+    // Build each parent path and ensure it exists
+    for (let i = 1; i <= segments.length; i++) {
+      const parentPath = segments.slice(0, i).join("/");
+      const parentFile = this.app.vault.getAbstractFileByPath(parentPath);
+
+      if (!parentFile) {
+        // Parent doesn't exist - create it
+        await this.app.vault.createFolder(parentPath);
+      } else if (!(parentFile instanceof TFolder)) {
+        // Parent exists but is a file - error
+        throw new Error(
+          `Cannot create folder "${normalizedPath}": intermediate path "${parentPath}" exists but is not a folder`
+        );
+      }
+      // If parent exists and is a folder, continue to next segment
     }
   }
 

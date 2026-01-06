@@ -7,6 +7,63 @@
 const MAX_COLLISION_ATTEMPTS = 1000;
 
 /**
+ * Check if one path is nested within another (parent-child relationship).
+ * Returns true if path1 is a parent of path2 OR path2 is a parent of path1.
+ *
+ * Examples:
+ * - "Work" and "Work/Projects" → true (Work is parent of Work/Projects)
+ * - "Projects/Archive" and "Projects" → true (Projects is parent of Projects/Archive)
+ * - "Projects" and "Archive" → false (neither is parent of other)
+ * - "Projects" and "Projects" → true (same path is considered nested)
+ *
+ * @param path1 - First path to compare
+ * @param path2 - Second path to compare
+ * @returns true if the paths have a parent-child relationship
+ */
+export function isNestedPath(path1: string, path2: string): boolean {
+  const normalized1 = normalizePathPure(path1);
+  const normalized2 = normalizePathPure(path2);
+
+  // Same path is considered nested
+  if (normalized1 === normalized2) {
+    return true;
+  }
+
+  // Check if path1 is parent of path2
+  if (normalized2.startsWith(normalized1 + "/")) {
+    return true;
+  }
+
+  // Check if path2 is parent of path1
+  if (normalized1.startsWith(normalized2 + "/")) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Validate that all paths in the array are non-nested with each other.
+ * Returns an error message if any paths are nested, null if all paths are valid.
+ *
+ * @param paths - Array of paths to validate
+ * @returns Error message string if paths are nested, null if all paths are non-nested
+ */
+export function arePathsNested(paths: string[]): string | null {
+  // Check every combination of paths
+  for (let i = 0; i < paths.length; i++) {
+    for (let j = i + 1; j < paths.length; j++) {
+      if (isNestedPath(paths[i], paths[j])) {
+        const path1 = normalizePathPure(paths[i]);
+        const path2 = normalizePathPure(paths[j]);
+        return `PARA folders cannot be nested: "${path1}" and "${path2}"`;
+      }
+    }
+  }
+  return null;
+}
+
+/**
  * Normalize a path by trimming leading/trailing slashes and collapsing multiple slashes.
  *
  * IMPORTANT: This must behave identically to Obsidian's normalizePath() for common cases.

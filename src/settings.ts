@@ -1,5 +1,6 @@
 import { App, Notice, PluginSettingTab, Setting } from "obsidian";
 import type ArchiveProjectPlugin from "./main";
+import { isNestedPath } from "./utils";
 
 export interface ArchiveProjectSettings {
   projectsPath: string;
@@ -55,6 +56,22 @@ export class ArchiveProjectSettingTab extends PluginSettingTab {
               text.setValue(this.plugin.settings.projectsPath);
               return;
             }
+            // Check for nested paths
+            if (isNestedPath(normalized, this.plugin.settings.archivePath)) {
+              new Notice("Projects folder cannot be nested with Archive folder");
+              text.setValue(this.plugin.settings.projectsPath);
+              return;
+            }
+            if (isNestedPath(normalized, this.plugin.settings.areasPath)) {
+              new Notice("Projects folder cannot be nested with Areas folder");
+              text.setValue(this.plugin.settings.projectsPath);
+              return;
+            }
+            if (isNestedPath(normalized, this.plugin.settings.resourcesPath)) {
+              new Notice("Projects folder cannot be nested with Resources folder");
+              text.setValue(this.plugin.settings.projectsPath);
+              return;
+            }
             this.plugin.settings.projectsPath = normalized;
             await this.plugin.saveSettings();
           })
@@ -81,6 +98,22 @@ export class ArchiveProjectSettingTab extends PluginSettingTab {
             }
             if (normalized === this.plugin.settings.resourcesPath) {
               new Notice("Areas folder cannot be the same as Resources folder");
+              text.setValue(this.plugin.settings.areasPath);
+              return;
+            }
+            // Check for nested paths
+            if (isNestedPath(normalized, this.plugin.settings.archivePath)) {
+              new Notice("Areas folder cannot be nested with Archive folder");
+              text.setValue(this.plugin.settings.areasPath);
+              return;
+            }
+            if (isNestedPath(normalized, this.plugin.settings.projectsPath)) {
+              new Notice("Areas folder cannot be nested with Projects folder");
+              text.setValue(this.plugin.settings.areasPath);
+              return;
+            }
+            if (isNestedPath(normalized, this.plugin.settings.resourcesPath)) {
+              new Notice("Areas folder cannot be nested with Resources folder");
               text.setValue(this.plugin.settings.areasPath);
               return;
             }
@@ -113,6 +146,22 @@ export class ArchiveProjectSettingTab extends PluginSettingTab {
               text.setValue(this.plugin.settings.resourcesPath);
               return;
             }
+            // Check for nested paths
+            if (isNestedPath(normalized, this.plugin.settings.archivePath)) {
+              new Notice("Resources folder cannot be nested with Archive folder");
+              text.setValue(this.plugin.settings.resourcesPath);
+              return;
+            }
+            if (isNestedPath(normalized, this.plugin.settings.projectsPath)) {
+              new Notice("Resources folder cannot be nested with Projects folder");
+              text.setValue(this.plugin.settings.resourcesPath);
+              return;
+            }
+            if (isNestedPath(normalized, this.plugin.settings.areasPath)) {
+              new Notice("Resources folder cannot be nested with Areas folder");
+              text.setValue(this.plugin.settings.resourcesPath);
+              return;
+            }
             this.plugin.settings.resourcesPath = normalized;
             await this.plugin.saveSettings();
           })
@@ -142,14 +191,30 @@ export class ArchiveProjectSettingTab extends PluginSettingTab {
               text.setValue(this.plugin.settings.archivePath);
               return;
             }
+            // Check for nested paths
+            if (isNestedPath(normalized, this.plugin.settings.projectsPath)) {
+              new Notice("Archive folder cannot be nested with Projects folder");
+              text.setValue(this.plugin.settings.archivePath);
+              return;
+            }
+            if (isNestedPath(normalized, this.plugin.settings.areasPath)) {
+              new Notice("Archive folder cannot be nested with Areas folder");
+              text.setValue(this.plugin.settings.archivePath);
+              return;
+            }
+            if (isNestedPath(normalized, this.plugin.settings.resourcesPath)) {
+              new Notice("Archive folder cannot be nested with Resources folder");
+              text.setValue(this.plugin.settings.archivePath);
+              return;
+            }
             this.plugin.settings.archivePath = normalized;
             await this.plugin.saveSettings();
           })
       );
 
     new Setting(containerEl)
-      .setName("Focus Projects folder after archive")
-      .setDesc("Return focus to the Projects folder in the file explorer after archiving")
+      .setName("Focus source folder after archive")
+      .setDesc("Return focus to the source folder (Projects, Areas, or Resources) after archiving")
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.focusAfterArchive)

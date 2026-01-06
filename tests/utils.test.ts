@@ -5,6 +5,8 @@ import {
   isTopLevelProjectFolder,
   getItemName,
   generateArchiveDestination,
+  isNestedPath,
+  arePathsNested,
 } from "../src/utils";
 
 describe("normalizePathPure", () => {
@@ -219,5 +221,86 @@ describe("generateArchiveDestination", () => {
     expect(() =>
       generateArchiveDestination("Archive", "MyProject", alwaysCollides)
     ).toThrow("Too many archive collisions");
+  });
+});
+
+describe("isNestedPath", () => {
+  it("returns true when path1 is parent of path2", () => {
+    expect(isNestedPath("Work", "Work/Projects")).toBe(true);
+    expect(isNestedPath("Projects", "Projects/MyProject")).toBe(true);
+  });
+
+  it("returns true when path2 is parent of path1", () => {
+    expect(isNestedPath("Work/Projects", "Work")).toBe(true);
+    expect(isNestedPath("Projects/Archive", "Projects")).toBe(true);
+  });
+
+  it("returns true when paths are identical", () => {
+    expect(isNestedPath("Projects", "Projects")).toBe(true);
+    expect(isNestedPath("Work/Projects", "Work/Projects")).toBe(true);
+  });
+
+  it("returns true for deeply nested paths", () => {
+    expect(isNestedPath("A/B", "A/B/C/D")).toBe(true);
+    expect(isNestedPath("A/B/C/D", "A/B")).toBe(true);
+  });
+
+  it("returns false when paths are unrelated", () => {
+    expect(isNestedPath("Projects", "Archive")).toBe(false);
+    expect(isNestedPath("Areas", "Resources")).toBe(false);
+  });
+
+  it("returns false when paths share a prefix but aren't nested", () => {
+    expect(isNestedPath("ProjectsExtra", "Projects")).toBe(false);
+    expect(isNestedPath("Projects", "ProjectsExtra")).toBe(false);
+  });
+
+  it("handles paths with various normalizations", () => {
+    expect(isNestedPath("/Work/", "Work/Projects")).toBe(true);
+    expect(isNestedPath("Work", "/Work/Projects/")).toBe(true);
+    expect(isNestedPath("/Work///", "///Work/Projects///")).toBe(true);
+  });
+
+  it("handles backslashes", () => {
+    expect(isNestedPath("Work\\Projects", "Work")).toBe(true);
+    expect(isNestedPath("Work", "Work\\Projects")).toBe(true);
+  });
+});
+
+describe("arePathsNested", () => {
+  it("returns null when all paths are non-nested", () => {
+    expect(arePathsNested(["Projects", "Areas", "Resources", "Archive"])).toBe(
+      null
+    );
+  });
+
+  it("returns error message when any two paths are nested", () => {
+    const result = arePathsNested(["Projects", "Projects/Archive", "Areas"]);
+    expect(result).toBeTruthy();
+    expect(result).toContain("cannot be nested");
+    expect(result).toContain("Projects");
+  });
+
+  it("detects nesting in various positions", () => {
+    expect(arePathsNested(["Work", "Work/Projects", "Archive"])).toBeTruthy();
+    expect(arePathsNested(["Projects", "Areas", "Areas/SubArea"])).toBeTruthy();
+  });
+
+  it("handles identical paths", () => {
+    const result = arePathsNested(["Projects", "Projects"]);
+    expect(result).toBeTruthy();
+  });
+
+  it("handles empty array", () => {
+    expect(arePathsNested([])).toBe(null);
+  });
+
+  it("handles single path", () => {
+    expect(arePathsNested(["Projects"])).toBe(null);
+  });
+
+  it("handles normalized and unnormalized paths", () => {
+    const result = arePathsNested(["/Projects/", "Projects"]);
+    expect(result).toBeTruthy(); // Same path with different formatting
   });
 });
