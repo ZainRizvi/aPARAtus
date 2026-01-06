@@ -2,7 +2,47 @@
 
 ## Project Overview
 
-A minimal PARA-aware Obsidian plugin that adds right-click context menu functionality to archive top-level project folders.
+A PARA-aware Obsidian plugin that helps users manage their folders according to the PARA methodology (Projects, Areas, Resources, Archive).
+
+## North Star
+
+> **Important**: This section describes the long-term vision for this plugin. It is **not** a specification for immediate implementation. Agents should not build toward these goals unless explicitly asked. Instead, use this as a guide for:
+> - Informing design decisions for current work
+> - Resolving ambiguities about how features should be implemented
+> - Understanding the future shape of the codebase
+
+### Vision
+
+This plugin simplifies two core aspects of the PARA workflow:
+
+1. **Archiving** — Moving projects, areas, and resources that are no longer active into the Archive folder
+2. **Creation** — Quickly creating new projects, areas, and resources with proper structure and templates
+
+### Planned Capabilities
+
+#### Creation Commands
+
+Command palette commands for creating new PARA items:
+- **Create Project** — Prompts for a name, creates a project folder with optional date prefix, applies template
+- **Create Area** — Prompts for a name, creates an area folder, applies template
+- **Create Resource** — Prompts for a name, creates a resource folder, applies template
+
+Each command will:
+- Create the appropriate folder in the correct PARA location
+- Generate a Table of Contents note (or similar structure) within the folder
+- Apply a user-customizable template using either Obsidian's core templates or Templater (based on user configuration)
+- Provide sensible default templates for users who haven't customized them
+
+#### Project Date Prefixes
+
+Projects can optionally have their creation date prefixed to the folder name (e.g., `2024-01-15 Website Redesign`). This is configurable per-vault.
+
+#### Project Folder Sorting
+
+The Projects folder can be automatically sorted by user-selected criteria:
+- **Disabled** — Let Obsidian or other plugins manage sort order
+- **Last Modified** — Sort by the most recent modification timestamp of any file within each project
+- **Date Prefix** — Sort by the date prefix in the project folder name (requires date prefixes to be enabled)
 
 ## Tech Stack
 
@@ -83,14 +123,6 @@ Maps plugin versions to minimum required Obsidian versions.
 2. In another terminal: Make changes
 3. Reload Obsidian (Cmd+R) to test
 4. `npm test` before committing
-
-## Future Ideas
-
-- **Project Creation Wizard**: Create new projects from templates
-- **Archive Browser**: View and restore archived projects
-- **Auto-archive**: Archive inactive projects after X days
-- **Archive Notes**: Prompt for archive reason/notes
-- **Bulk Archive**: Archive multiple projects at once
 
 ## Task Tracking (BD)
 
