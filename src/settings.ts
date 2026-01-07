@@ -436,7 +436,7 @@ export class ParaManagerSettingTab extends PluginSettingTab {
       .setDesc("How to sort projects in the Projects folder")
       .addDropdown((dropdown) =>
         dropdown
-          .addOption("disabled", "Disabled (manual order)")
+          .addOption("disabled", "Alphabetical (Obsidian default)")
           .addOption("lastModified", "Last modified (newest first)")
           .addOption("datePrefix", "Date prefix (newer first)")
           .setValue(this.plugin.settings.projectSortOrder)

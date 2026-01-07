@@ -54,6 +54,22 @@ export default class ParaManagerPlugin extends Plugin {
       })
     );
 
+    // Trigger re-sort when files are modified (for "lastModified" sort mode)
+    this.registerEvent(
+      this.app.vault.on('modify', (file) => {
+        if (this.settings.projectSortOrder === 'lastModified') {
+          // Check if modified file is inside the Projects folder
+          const projectsPath = normalizePath(this.settings.projectsPath);
+          if (file.path.startsWith(projectsPath + '/')) {
+            const fileExplorer = this.app.workspace.getLeavesOfType('file-explorer')[0];
+            if (fileExplorer) {
+              (fileExplorer.view as FileExplorerView).requestSort?.();
+            }
+          }
+        }
+      })
+    );
+
     // Add settings tab
     this.addSettingTab(new ParaManagerSettingTab(this.app, this));
 
@@ -458,33 +474,17 @@ export default class ParaManagerPlugin extends Plugin {
     const projectsPath = normalizePath(this.settings.projectsPath);
     const plugin = this;
 
-    console.log("aPARAtus: Installing sorting patch for", projectsPath, "with order", this.settings.projectSortOrder);
-
     this.sortingPatchUninstaller = around(view.constructor.prototype, {
       getSortedFolderItems(original) {
         return function (this: any, folder: TFolder) {
           // Only intercept for Projects folder
           if (folder.path !== projectsPath) {
-            // Debug: log when we check the Projects folder path
-            if (folder.path.includes("Projects") || folder.path.includes("1 -")) {
-              console.log("aPARAtus: Checking folder:", JSON.stringify(folder.path), "vs configured:", JSON.stringify(projectsPath), "match:", folder.path === projectsPath);
-            }
             return original.call(this, folder);
           }
 
-          console.log("aPARAtus: Sorting Projects folder, order:", plugin.settings.projectSortOrder);
-
           try {
             const items = original.call(this, folder);
-            // Debug: inspect what items actually are
-            console.log("aPARAtus: Items type:", typeof items, Array.isArray(items));
-            if (items.length > 0) {
-              console.log("aPARAtus: First item:", items[0]);
-              console.log("aPARAtus: First item keys:", Object.keys(items[0]));
-              console.log("aPARAtus: First item.file:", items[0].file);
-            }
-            const sorted = plugin.sortProjectItems(items);
-            return sorted;
+            return plugin.sortProjectItems(items);
           } catch (e) {
             console.error("aPARAtus: Sorting failed, using default", e);
             return original.call(this, folder);
@@ -523,7 +523,6 @@ export default class ParaManagerPlugin extends Plugin {
     } else if (this.settings.projectSortOrder === "datePrefix") {
       // Extract the date format from user's projectFolderFormat setting
       const dateFormat = extractDateFormatFromProjectFormat(this.settings.projectFolderFormat);
-      console.log("aPARAtus: Date format extracted:", JSON.stringify(dateFormat), "from", JSON.stringify(this.settings.projectFolderFormat));
 
       sorted.sort((a, b) => {
         // Items are wrappers - actual file is in .file property
@@ -534,8 +533,6 @@ export default class ParaManagerPlugin extends Plugin {
         // Not using strict mode since folder name has extra text after the date
         const dateA = window.moment(fileA.name, dateFormat);
         const dateB = window.moment(fileB.name, dateFormat);
-
-        console.log("aPARAtus: Parsing", fileA.name, "→", dateA.isValid() ? dateA.format("YYYY-MM-DD") : "INVALID");
 
         // Valid dates sort by date (newer first), invalid dates go to end
         const validA = dateA.isValid();
