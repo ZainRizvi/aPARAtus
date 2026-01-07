@@ -136,6 +136,14 @@ npm run release           # patch release (0.1.0 → 0.1.1)
 npm run release patch     # same as above
 npm run release minor     # new features (0.1.0 → 0.2.0)
 npm run release major     # breaking changes (0.1.0 → 1.0.0)
+
+# Beta releases (marked as pre-release on GitHub)
+npm run release beta          # 0.1.5 → 0.1.6-beta.1, or 0.1.6-beta.1 → 0.1.6-beta.2
+npm run release patch beta    # 0.1.5 → 0.1.6-beta.1
+npm run release minor beta    # 0.1.5 → 0.2.0-beta.1
+
+# Promote beta to stable
+npm run release patch         # 0.1.6-beta.2 → 0.1.6
 ```
 
 ### Option 2: GitHub Actions
