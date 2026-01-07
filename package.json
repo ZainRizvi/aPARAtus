@@ -1,6 +1,6 @@
 {
   "name": "aparatus",
-  "version": "0.1.6-beta.1",
+  "version": "0.1.6-beta.2",
   "description": "Obsidian plugin for PARA methodology: create and archive Projects, Areas, and Resources with ease",
   "main": "main.js",
   "type": "module",
