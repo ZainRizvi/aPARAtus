@@ -458,17 +458,26 @@ export default class ParaManagerPlugin extends Plugin {
     const projectsPath = normalizePath(this.settings.projectsPath);
     const plugin = this;
 
+    console.log("aPARAtus: Installing sorting patch for", projectsPath, "with order", this.settings.projectSortOrder);
+
     this.sortingPatchUninstaller = around(view.constructor.prototype, {
       getSortedFolderItems(original) {
         return function (this: any, folder: TFolder) {
+          console.log("aPARAtus: getSortedFolderItems called for", folder.path);
+
           // Only intercept for Projects folder
           if (folder.path !== projectsPath) {
             return original.call(this, folder);
           }
 
+          console.log("aPARAtus: Intercepting sort for Projects folder, order:", plugin.settings.projectSortOrder);
+
           try {
             const items = original.call(this, folder);
-            return plugin.sortProjectItems(items);
+            console.log("aPARAtus: Original items:", items.map((i: TAbstractFile) => i.name));
+            const sorted = plugin.sortProjectItems(items);
+            console.log("aPARAtus: Sorted items:", sorted.map((i: TAbstractFile) => i.name));
+            return sorted;
           } catch (e) {
             console.error("aPARAtus: Sorting failed, using default", e);
             return original.call(this, folder);
@@ -490,10 +499,11 @@ export default class ParaManagerPlugin extends Plugin {
 
     if (this.settings.projectSortOrder === "lastModified") {
       sorted.sort((a, b) => {
+        // Use safe access - stat may be undefined for some files
         const mtimeA =
-          a instanceof TFolder ? getFolderLastModifiedTime(a) : (a as TFile).stat.mtime;
+          a instanceof TFolder ? getFolderLastModifiedTime(a) : ((a as TFile).stat?.mtime ?? 0);
         const mtimeB =
-          b instanceof TFolder ? getFolderLastModifiedTime(b) : (b as TFile).stat.mtime;
+          b instanceof TFolder ? getFolderLastModifiedTime(b) : ((b as TFile).stat?.mtime ?? 0);
         return compareByLastModified({ mtime: mtimeA }, { mtime: mtimeB });
       });
     } else if (this.settings.projectSortOrder === "datePrefix") {
