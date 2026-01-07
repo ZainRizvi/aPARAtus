@@ -348,17 +348,17 @@ export class ParaManagerSettingTab extends PluginSettingTab {
     // (can't reference setting variable inside its own initialization chain)
     const projectsSetting = new Setting(containerEl)
       .setName("Projects folder")
-      .setDesc("Path to your Projects folder (top-level project folders live here)");
+      .setDesc("Path to your projects folder (top-level project folders live here)");
     projectsSetting.addText((text) => setupFolderPathInput(projectsSetting, text, "projectsPath", this.plugin));
 
     const areasSetting = new Setting(containerEl)
       .setName("Areas folder")
-      .setDesc("Path to your Areas folder (top-level area folders live here)");
+      .setDesc("Path to your areas folder (top-level area folders live here)");
     areasSetting.addText((text) => setupFolderPathInput(areasSetting, text, "areasPath", this.plugin));
 
     const resourcesSetting = new Setting(containerEl)
       .setName("Resources folder")
-      .setDesc("Path to your Resources folder (top-level resource folders live here)");
+      .setDesc("Path to your resources folder (top-level resource folders live here)");
     resourcesSetting.addText((text) => setupFolderPathInput(resourcesSetting, text, "resourcesPath", this.plugin));
 
     const archiveSetting = new Setting(containerEl)
@@ -446,7 +446,7 @@ export class ParaManagerSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Focus source folder after archive")
-      .setDesc("Return focus to the source folder (Projects, Areas, or Resources) after archiving")
+      .setDesc("Return focus to the source folder (projects, areas, or resources) after archiving")
       .addToggle((toggle) =>
         toggle
           .setValue(this.plugin.settings.focusAfterArchive)
@@ -470,7 +470,7 @@ export class ParaManagerSettingTab extends PluginSettingTab {
 
     new Setting(containerEl)
       .setName("Project folder sort order")
-      .setDesc("How to sort projects in the Projects folder")
+      .setDesc("How to sort projects in the projects folder")
       .addDropdown((dropdown) =>
         dropdown
           .addOption("disabled", "Alphabetical (Obsidian default)")
