@@ -1,4 +1,4 @@
-import { Notice, Plugin, TAbstractFile, TFile, TFolder, normalizePath } from "obsidian";
+import { Notice, Plugin, TAbstractFile, TFile, TFolder, normalizePath, debounce } from "obsidian";
 import { around } from "monkey-around";
 import {
   ParaManagerSettings,
@@ -37,7 +37,9 @@ export default class ParaManagerPlugin extends Plugin {
   settings: ParaManagerSettings = DEFAULT_SETTINGS;
   private archivingItems = new Set<string>();
   private sortingPatchUninstaller: (() => void) | null = null;
-  private sortDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  private debouncedRequestSort = debounce((view: FileExplorerView) => {
+    view.requestSort?.();
+  }, 1000, true);
 
   async onload(): Promise<void> {
     await this.loadSettings();
@@ -63,17 +65,11 @@ export default class ParaManagerPlugin extends Plugin {
           // Check if modified file is inside the Projects folder
           const projectsPath = normalizePath(this.settings.projectsPath);
           if (file.path.startsWith(projectsPath + '/')) {
-            // Debounce: wait 1 second after last change before re-sorting
-            if (this.sortDebounceTimer) {
-              clearTimeout(this.sortDebounceTimer);
+            // Use Obsidian's debounce API - debounce handles cleanup automatically
+            const fileExplorer = this.app.workspace.getLeavesOfType('file-explorer')[0];
+            if (fileExplorer) {
+              this.debouncedRequestSort(fileExplorer.view as FileExplorerView);
             }
-            this.sortDebounceTimer = setTimeout(() => {
-              const fileExplorer = this.app.workspace.getLeavesOfType('file-explorer')[0];
-              if (fileExplorer) {
-                (fileExplorer.view as FileExplorerView).requestSort?.();
-              }
-              this.sortDebounceTimer = null;
-            }, 1000);
           }
         }
       })
@@ -85,7 +81,7 @@ export default class ParaManagerPlugin extends Plugin {
     // Register command palette commands
     this.addCommand({
       id: "archive-item",
-      name: "Archive Item",
+      name: "Archive item",
       checkCallback: (checking: boolean) => {
         const activeFile = this.app.workspace.getActiveFile();
         if (!activeFile) {
@@ -106,7 +102,7 @@ export default class ParaManagerPlugin extends Plugin {
 
     this.addCommand({
       id: "create-project",
-      name: "Create Project",
+      name: "Create project",
       callback: () => {
         new NameInputModal(
           this.app,
@@ -119,7 +115,7 @@ export default class ParaManagerPlugin extends Plugin {
 
     this.addCommand({
       id: "create-area",
-      name: "Create Area",
+      name: "Create area",
       callback: () => {
         new NameInputModal(
           this.app,
@@ -132,7 +128,7 @@ export default class ParaManagerPlugin extends Plugin {
 
     this.addCommand({
       id: "create-resource",
-      name: "Create Resource",
+      name: "Create resource",
       callback: () => {
         new NameInputModal(
           this.app,
@@ -176,9 +172,6 @@ export default class ParaManagerPlugin extends Plugin {
   onunload(): void {
     this.sortingPatchUninstaller?.();
     this.archivingItems.clear();
-    if (this.sortDebounceTimer) {
-      clearTimeout(this.sortDebounceTimer);
-    }
   }
 
   async loadSettings(): Promise<void> {

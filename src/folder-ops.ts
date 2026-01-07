@@ -103,7 +103,6 @@ export async function focusFolder(app: App, folderPath: string): Promise<void> {
   } catch (error) {
     // Best-effort UX enhancement - silent failure is acceptable here
     // unlike core operations (archiving) which show Notice to user
-    console.debug("aPARAtus: Could not focus folder", error);
   }
 }
 

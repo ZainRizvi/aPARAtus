@@ -1,4 +1,4 @@
-import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, TextComponent, TFile, TFolder, normalizePath } from "obsidian";
+import { AbstractInputSuggest, App, Notice, PluginSettingTab, Setting, TextComponent, TFile, TFolder } from "obsidian";
 import type ParaManagerPlugin from "./main";
 import { validateParaFolderPath, type ParaFolderField } from "./utils";
 import { ensureFolderExists } from "./folder-ops";
@@ -213,9 +213,7 @@ function setupTemplatePathInput(
 
   // Create warning element (hidden by default)
   const warningEl = document.createElement("div");
-  warningEl.classList.add("aparatus-inline-message");
-  warningEl.style.display = "none";
-  warningEl.style.color = "var(--text-muted)";
+  warningEl.classList.add("aparatus-inline-message", "aparatus-hidden", "aparatus-text-muted");
   setting.settingEl.insertAdjacentElement("afterend", warningEl);
 
   /**
@@ -224,16 +222,16 @@ function setupTemplatePathInput(
    */
   const updateWarningState = (path: string): void => {
     if (!path.trim()) {
-      warningEl.style.display = "none";
+      warningEl.classList.add("aparatus-hidden");
       return;
     }
 
     const file = plugin.app.vault.getAbstractFileByPath(path);
     if (!file) {
       warningEl.textContent = `Template file "${path}" does not exist (will use default template)`;
-      warningEl.style.display = "block";
+      warningEl.classList.remove("aparatus-hidden");
     } else {
-      warningEl.style.display = "none";
+      warningEl.classList.add("aparatus-hidden");
     }
   };
 
@@ -266,8 +264,7 @@ function setupFolderPathInput(
 
   // Create warning element (hidden by default)
   const warningEl = document.createElement("div");
-  warningEl.classList.add("aparatus-inline-message");
-  warningEl.style.display = "none";
+  warningEl.classList.add("aparatus-inline-message", "aparatus-hidden", "aparatus-text-warning");
   setting.settingEl.insertAdjacentElement("afterend", warningEl);
 
   /**
@@ -280,11 +277,11 @@ function setupFolderPathInput(
       // Show warning state
       inputEl.classList.add(WARNING_INPUT_CLASS);
       warningEl.textContent = `Folder "${path}" does not exist (will be created automatically)`;
-      warningEl.style.display = "block";
+      warningEl.classList.remove("aparatus-hidden");
     } else {
       // Clear warning state
       inputEl.classList.remove(WARNING_INPUT_CLASS);
-      warningEl.style.display = "none";
+      warningEl.classList.add("aparatus-hidden");
     }
   };
 
@@ -307,14 +304,16 @@ function setupFolderPathInput(
       inputEl.classList.add(INVALID_INPUT_CLASS);
       inputEl.classList.remove(WARNING_INPUT_CLASS);
       warningEl.textContent = error;
-      warningEl.style.color = "var(--text-error)";
-      warningEl.style.display = "block";
+      warningEl.classList.remove("aparatus-text-warning");
+      warningEl.classList.add("aparatus-text-error");
+      warningEl.classList.remove("aparatus-hidden");
       // Revert to last valid value
       text.setValue(plugin.settings[field]);
       // Clear error styling after reverting and check warning state
       setTimeout(() => {
         inputEl.classList.remove(INVALID_INPUT_CLASS);
-        warningEl.style.color = "var(--color-yellow)";
+        warningEl.classList.remove("aparatus-text-error");
+        warningEl.classList.add("aparatus-text-warning");
         updateWarningState(plugin.settings[field]);
       }, 100);
     } else {
@@ -380,8 +379,7 @@ export class ParaManagerSettingTab extends PluginSettingTab {
 
     // Create preview element (will be added below the setting)
     const previewEl = document.createElement("div");
-    previewEl.classList.add("aparatus-inline-message");
-    previewEl.style.color = "var(--text-muted)";
+    previewEl.classList.add("aparatus-inline-message", "aparatus-text-muted");
 
     formatSetting.addText((text) => {
       const inputEl = text.inputEl;
@@ -397,12 +395,13 @@ export class ParaManagerSettingTab extends PluginSettingTab {
           const escaped = format.replace(/\{\{name\}\}/g, `[${sampleName}]`);
           const result = now.format(escaped);
           previewEl.textContent = `Preview: ${result}`;
-          previewEl.style.color = "var(--text-muted)";
-          inputEl.style.borderColor = "";
+          previewEl.classList.remove("aparatus-text-error");
+          previewEl.classList.add("aparatus-text-muted");
           inputEl.classList.remove(INVALID_INPUT_CLASS);
         } else {
           previewEl.textContent = "Format must contain {{name}}";
-          previewEl.style.color = "var(--text-error)";
+          previewEl.classList.remove("aparatus-text-muted");
+          previewEl.classList.add("aparatus-text-error");
           inputEl.classList.add(INVALID_INPUT_CLASS);
         }
 
@@ -487,7 +486,7 @@ export class ParaManagerSettingTab extends PluginSettingTab {
       );
 
     // Template settings header
-    containerEl.createEl("h3", { text: "Templates" });
+    new Setting(containerEl).setHeading().setName("Templates");
 
     // Project template
     const projectTemplateSetting = new Setting(containerEl)

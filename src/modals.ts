@@ -107,8 +107,7 @@ export class NameInputModal extends Modal {
       type: "text",
       placeholder: this.placeholder,
     });
-    input.style.width = "100%";
-    input.style.marginBottom = "1em";
+    input.addClass("aparatus-modal-input");
     input.focus();
 
     const buttonContainer = contentEl.createDiv({ cls: "modal-button-container" });
