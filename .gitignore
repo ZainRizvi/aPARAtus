@@ -1,8 +1,8 @@
 # Dependencies
 node_modules/
 
-# Build output (keep in repo for releases, but optional)
-# main.js
+# Build output (built fresh at release time)
+main.js
 
 # IDE
 .idea/
