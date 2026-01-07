@@ -100,7 +100,7 @@ export async function focusFolder(app: App, folderPath: string): Promise<void> {
     if (typeof fileExplorerView.revealInFolder === "function") {
       fileExplorerView.revealInFolder(folder as TAbstractFile);
     }
-  } catch (error) {
+  } catch {
     // Best-effort UX enhancement - silent failure is acceptable here
     // unlike core operations (archiving) which show Notice to user
   }
