@@ -8,9 +8,8 @@ import {
   isNestedPath,
   arePathsNested,
   validateParaFolderPath,
-  extractDatePrefix,
   compareByLastModified,
-  compareByDatePrefix,
+  extractDateFormatFromProjectFormat,
   type ParaSettings,
 } from "../src/utils";
 
@@ -429,48 +428,23 @@ describe("validateParaFolderPath", () => {
   });
 });
 
-describe("extractDatePrefix", () => {
-  it("extracts valid YYYY-MM-DD date from folder name", () => {
-    const result = extractDatePrefix("2024-01-15 Project Name");
-    expect(result).not.toBeNull();
-    expect(result?.getUTCFullYear()).toBe(2024);
-    expect(result?.getUTCMonth()).toBe(0); // January is 0-indexed
-    expect(result?.getUTCDate()).toBe(15);
+describe("extractDateFormatFromProjectFormat", () => {
+  it("extracts date format before {{name}}", () => {
+    expect(extractDateFormatFromProjectFormat("YYYY-MM-DD {{name}}")).toBe("YYYY-MM-DD ");
+    expect(extractDateFormatFromProjectFormat("YYMMDD - {{name}}")).toBe("YYMMDD - ");
+    expect(extractDateFormatFromProjectFormat("YYYYMMDD_{{name}}")).toBe("YYYYMMDD_");
   });
 
-  it("returns null for folder name without date prefix", () => {
-    expect(extractDatePrefix("Project Name")).toBeNull();
-    expect(extractDatePrefix("My 2024 Project")).toBeNull();
+  it("handles format with {{name}} at start", () => {
+    expect(extractDateFormatFromProjectFormat("{{name}} YYYY-MM-DD")).toBe("");
   });
 
-  it("returns null for invalid date format", () => {
-    expect(extractDatePrefix("01-15-2024 Project")).toBeNull();
-    expect(extractDatePrefix("2024/01/15 Project")).toBeNull();
-    expect(extractDatePrefix("2024-1-15 Project")).toBeNull(); // Single digit month
+  it("returns full string if no {{name}} placeholder", () => {
+    expect(extractDateFormatFromProjectFormat("YYYY-MM-DD")).toBe("YYYY-MM-DD");
   });
 
-  it("returns null for invalid dates", () => {
-    expect(extractDatePrefix("2024-02-30 Project")).toBeNull(); // Feb 30 doesn't exist
-    expect(extractDatePrefix("2024-13-01 Project")).toBeNull(); // Month 13 doesn't exist
-    expect(extractDatePrefix("2024-00-15 Project")).toBeNull(); // Month 0 doesn't exist
-  });
-
-  it("handles dates at edge of validity", () => {
-    // Valid leap year date
-    const leapDay = extractDatePrefix("2024-02-29 Project");
-    expect(leapDay).not.toBeNull();
-    expect(leapDay?.getUTCDate()).toBe(29);
-
-    // Invalid non-leap year date
-    const nonLeapDay = extractDatePrefix("2023-02-29 Project");
-    expect(nonLeapDay).toBeNull();
-  });
-
-  it("handles folder names starting with date", () => {
-    const result = extractDatePrefix("2024-12-31");
-    expect(result).not.toBeNull();
-    expect(result?.getUTCMonth()).toBe(11); // December is 11
-    expect(result?.getUTCDate()).toBe(31);
+  it("handles empty string", () => {
+    expect(extractDateFormatFromProjectFormat("")).toBe("");
   });
 });
 
@@ -504,52 +478,3 @@ describe("compareByLastModified", () => {
   });
 });
 
-describe("compareByDatePrefix", () => {
-  it("sorts by date when both have valid date prefixes (newer first)", () => {
-    const a = { name: "2024-01-15 Project A" };
-    const b = { name: "2024-01-10 Project B" };
-    expect(compareByDatePrefix(a, b)).toBeLessThan(0); // a is newer
-  });
-
-  it("returns zero when both have same date prefix", () => {
-    const a = { name: "2024-01-15 Project A" };
-    const b = { name: "2024-01-15 Project B" };
-    expect(compareByDatePrefix(a, b)).toBe(0);
-  });
-
-  it("puts folders with date prefix before folders without", () => {
-    const a = { name: "2024-01-15 Project" };
-    const b = { name: "NoDateProject" };
-    expect(compareByDatePrefix(a, b)).toBeLessThan(0); // a comes first
-  });
-
-  it("puts folders with date prefix before folders without (reversed)", () => {
-    const a = { name: "NoDateProject" };
-    const b = { name: "2024-01-15 Project" };
-    expect(compareByDatePrefix(a, b)).toBeGreaterThan(0); // b comes first
-  });
-
-  it("maintains stable order when neither has date prefix", () => {
-    const a = { name: "ProjectA" };
-    const b = { name: "ProjectB" };
-    expect(compareByDatePrefix(a, b)).toBe(0); // Stable sort - no change
-  });
-
-  it("sorts correctly when used with Array.sort()", () => {
-    const items = [
-      { name: "2024-01-10 Old" },
-      { name: "NoDate1" },
-      { name: "2024-01-20 Newest" },
-      { name: "NoDate2" },
-      { name: "2024-01-15 Middle" },
-    ];
-    items.sort((a, b) => compareByDatePrefix(a, b));
-    expect(items.map((i) => i.name)).toEqual([
-      "2024-01-20 Newest",
-      "2024-01-15 Middle",
-      "2024-01-10 Old",
-      "NoDate1",
-      "NoDate2",
-    ]);
-  });
-});

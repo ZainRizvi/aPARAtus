@@ -226,34 +226,19 @@ export function validateParaFolderPath(
 }
 
 /**
- * Extract the date prefix from a folder name.
- * Expects date in YYYY-MM-DD format at the start of the name (e.g., "2024-01-15 Project Name").
- * Returns the parsed date or null if no valid date prefix is found.
+ * Extract the date format portion from projectFolderFormat setting.
+ * Removes the {{name}} placeholder and returns just the date format part.
  *
- * @param folderName - The folder name to extract date from
- * @returns Date object if a valid YYYY-MM-DD prefix is found, null otherwise
+ * @param projectFolderFormat - The full format string (e.g., "YYMMDD - {{name}}")
+ * @returns The date format portion (e.g., "YYMMDD - ")
  */
-export function extractDatePrefix(folderName: string): Date | null {
-  const dateRegex = /^(\d{4})-(\d{2})-(\d{2})/;
-  const match = folderName.match(dateRegex);
-
-  if (!match) {
-    return null;
+export function extractDateFormatFromProjectFormat(projectFolderFormat: string): string {
+  // Remove {{name}} and everything after it to get the date prefix format
+  const nameIndex = projectFolderFormat.indexOf("{{name}}");
+  if (nameIndex === -1) {
+    return projectFolderFormat;
   }
-
-  const year = parseInt(match[1], 10);
-  const month = parseInt(match[2], 10);
-  const day = parseInt(match[3], 10);
-
-  // Create date at midnight UTC to avoid timezone issues
-  const date = new Date(Date.UTC(year, month - 1, day));
-
-  // Validate the date is real (e.g., not 2024-02-30)
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) {
-    return null;
-  }
-
-  return date;
+  return projectFolderFormat.substring(0, nameIndex);
 }
 
 /**
@@ -268,34 +253,3 @@ export function compareByLastModified(a: { mtime: number }, b: { mtime: number }
   return b.mtime - a.mtime; // Descending order (newest first)
 }
 
-/**
- * Comparator for sorting project folders by date prefix (newer first).
- * Folders with invalid or missing date prefixes are sorted to the end.
- * Returns negative if a's date is newer, positive if b's date is newer, 0 if equal.
- *
- * @param a - First folder data with name
- * @param b - Second folder data with name
- * @returns Comparison result for sort
- */
-export function compareByDatePrefix(a: { name: string }, b: { name: string }): number {
-  const dateA = extractDatePrefix(a.name);
-  const dateB = extractDatePrefix(b.name);
-
-  // Both have valid dates
-  if (dateA && dateB) {
-    return dateB.getTime() - dateA.getTime(); // Descending order (newer first)
-  }
-
-  // Only a has a valid date - put it first
-  if (dateA && !dateB) {
-    return -1;
-  }
-
-  // Only b has a valid date - put it first
-  if (!dateA && dateB) {
-    return 1;
-  }
-
-  // Neither has a valid date - maintain current order (stable sort)
-  return 0;
-}

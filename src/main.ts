@@ -11,7 +11,7 @@ import {
   isTopLevelProjectFolder,
   arePathsNested,
   compareByLastModified,
-  compareByDatePrefix,
+  extractDateFormatFromProjectFormat,
 } from "./utils";
 import { ArchiveConfirmModal, NameInputModal } from "./modals";
 import { ensureFolderExists, getExistingPaths, focusFolder, getFolderLastModifiedTime } from "./folder-ops";
@@ -521,11 +521,28 @@ export default class ParaManagerPlugin extends Plugin {
         return compareByLastModified({ mtime: mtimeA }, { mtime: mtimeB });
       });
     } else if (this.settings.projectSortOrder === "datePrefix") {
+      // Extract the date format from user's projectFolderFormat setting
+      const dateFormat = extractDateFormatFromProjectFormat(this.settings.projectFolderFormat);
+
       sorted.sort((a, b) => {
         // Items are wrappers - actual file is in .file property
         const fileA = a.file as TAbstractFile;
         const fileB = b.file as TAbstractFile;
-        return compareByDatePrefix({ name: fileA.name }, { name: fileB.name });
+
+        // Parse dates using moment with the user's configured format
+        const dateA = window.moment(fileA.name, dateFormat, true);
+        const dateB = window.moment(fileB.name, dateFormat, true);
+
+        // Valid dates sort by date (newer first), invalid dates go to end
+        const validA = dateA.isValid();
+        const validB = dateB.isValid();
+
+        if (validA && validB) {
+          return dateB.valueOf() - dateA.valueOf(); // Newer first
+        }
+        if (validA && !validB) return -1; // A has date, B doesn't - A first
+        if (!validA && validB) return 1;  // B has date, A doesn't - B first
+        return 0; // Neither has valid date - keep original order
       });
     }
 
