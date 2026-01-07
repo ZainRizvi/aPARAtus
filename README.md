@@ -1,5 +1,7 @@
 # aPARAtus
 
+> *The right gear for organizing your second brain.*
+
 An Obsidian plugin for managing PARA folders (Projects, Areas, Resources, Archive). Quickly create new items and archive completed ones with ease.
 
 ## About PARA
