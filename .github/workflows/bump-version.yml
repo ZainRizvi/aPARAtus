@@ -1,0 +1,101 @@
+name: Bump Version and Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'Version bump type'
+        required: true
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+
+jobs:
+  bump-and-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Bump version
+        id: version
+        env:
+          BUMP_TYPE: ${{ github.event.inputs.bump }}
+        run: |
+          # Get current version from manifest.json
+          CURRENT=$(jq -r '.version' manifest.json)
+          echo "Current version: $CURRENT"
+
+          # Parse version components
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT"
+
+          # Bump based on input
+          case "$BUMP_TYPE" in
+            major)
+              MAJOR=$((MAJOR + 1))
+              MINOR=0
+              PATCH=0
+              ;;
+            minor)
+              MINOR=$((MINOR + 1))
+              PATCH=0
+              ;;
+            patch)
+              PATCH=$((PATCH + 1))
+              ;;
+          esac
+
+          NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+          # Update manifest.json
+          jq --arg v "$NEW_VERSION" '.version = $v' manifest.json > tmp.json && mv tmp.json manifest.json
+
+          # Update package.json
+          jq --arg v "$NEW_VERSION" '.version = $v' package.json > tmp.json && mv tmp.json package.json
+
+          # Update versions.json (add new version mapping)
+          MIN_APP=$(jq -r '.minAppVersion' manifest.json)
+          jq --arg v "$NEW_VERSION" --arg min "$MIN_APP" '. + {($v): $min}' versions.json > tmp.json && mv tmp.json versions.json
+
+      - name: Build
+        run: npm run build
+
+      - name: Commit and tag
+        env:
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          git add manifest.json package.json versions.json
+          git commit -m "Bump version to $NEW_VERSION"
+          git tag "$NEW_VERSION"
+          git push origin main --tags
+
+      - name: Create Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NEW_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$NEW_VERSION" \
+            --title="v$NEW_VERSION" \
+            --generate-notes \
+            main.js manifest.json
