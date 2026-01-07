@@ -1,5 +1,5 @@
 /**
- * Modal dialogs for the PARA-fect plugin.
+ * Modal dialogs for the aPARAtus plugin.
  */
 
 import { App, Modal } from "obsidian";

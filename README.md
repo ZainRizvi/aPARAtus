@@ -1,4 +1,4 @@
-# PARA-fect
+# aPARAtus
 
 An Obsidian plugin for managing PARA folders (Projects, Areas, Resources, Archive). Quickly create new items and archive completed ones with ease.
 
@@ -36,13 +36,13 @@ For more information, see [Building a Second Brain by Tiago Forte](https://www.b
 ### Manual Installation
 
 1. Download `main.js` and `manifest.json` from the latest release
-2. Create folder: `<vault>/.obsidian/plugins/paraffect/`
+2. Create folder: `<vault>/.obsidian/plugins/aparatus/`
 3. Copy the files into that folder
 4. Enable the plugin in Obsidian Settings > Community plugins
 
 ## Configuration
 
-Open Settings > PARA-fect to configure:
+Open Settings > aPARAtus to configure:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
@@ -68,7 +68,7 @@ Access all commands via the Command Palette (Cmd+P / Ctrl+P):
 
 You can set custom hotkeys for any command:
 1. Go to Settings > Hotkeys
-2. Search for "PARA-fect" or the specific command
+2. Search for "aPARAtus" or the specific command
 3. Click to set your preferred key combination
 
 Example hotkeys you might use:
@@ -196,7 +196,7 @@ npm install
 
 3. In Obsidian:
    - Enable Community plugins (if not already)
-   - Enable "PARA-fect" plugin
+   - Enable "aPARAtus" plugin
    - Reload (Cmd+R / Ctrl+R) after changes
 
 ## Manual Test Checklist

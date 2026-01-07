@@ -131,9 +131,9 @@ const FOLDER_DEFAULTS: Record<ParaFolderField, string> = {
 };
 
 /** CSS class for invalid input styling */
-const INVALID_INPUT_CLASS = "paraffect-invalid-input";
+const INVALID_INPUT_CLASS = "aparatus-invalid-input";
 /** CSS class for warning input styling */
-const WARNING_INPUT_CLASS = "paraffect-warning-input";
+const WARNING_INPUT_CLASS = "aparatus-warning-input";
 
 /**
  * Set up a template file path input with autocomplete for markdown files.
@@ -181,7 +181,7 @@ function setupTemplatePathInput(
 
   // Create warning element (hidden by default)
   const warningEl = document.createElement("div");
-  warningEl.classList.add("paraffect-inline-message");
+  warningEl.classList.add("aparatus-inline-message");
   warningEl.style.display = "none";
   warningEl.style.color = "var(--text-muted)";
   setting.settingEl.insertAdjacentElement("afterend", warningEl);
@@ -234,7 +234,7 @@ function setupFolderPathInput(
 
   // Create warning element (hidden by default)
   const warningEl = document.createElement("div");
-  warningEl.classList.add("paraffect-inline-message");
+  warningEl.classList.add("aparatus-inline-message");
   warningEl.style.display = "none";
   setting.settingEl.insertAdjacentElement("afterend", warningEl);
 
@@ -348,7 +348,7 @@ export class ParaManagerSettingTab extends PluginSettingTab {
 
     // Create preview element (will be added below the setting)
     const previewEl = document.createElement("div");
-    previewEl.classList.add("paraffect-inline-message");
+    previewEl.classList.add("aparatus-inline-message");
     previewEl.style.color = "var(--text-muted)";
 
     formatSetting.addText((text) => {

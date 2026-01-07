@@ -1,5 +1,5 @@
 /**
- * Pure utility functions for the PARA-fect plugin.
+ * Pure utility functions for the aPARAtus plugin.
  * These functions have no Obsidian dependencies and are fully testable.
  */
 
