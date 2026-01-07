@@ -523,6 +523,7 @@ export default class ParaManagerPlugin extends Plugin {
     } else if (this.settings.projectSortOrder === "datePrefix") {
       // Extract the date format from user's projectFolderFormat setting
       const dateFormat = extractDateFormatFromProjectFormat(this.settings.projectFolderFormat);
+      console.log("aPARAtus: Date format extracted:", JSON.stringify(dateFormat), "from", JSON.stringify(this.settings.projectFolderFormat));
 
       sorted.sort((a, b) => {
         // Items are wrappers - actual file is in .file property
@@ -533,6 +534,8 @@ export default class ParaManagerPlugin extends Plugin {
         // Not using strict mode since folder name has extra text after the date
         const dateA = window.moment(fileA.name, dateFormat);
         const dateB = window.moment(fileB.name, dateFormat);
+
+        console.log("aPARAtus: Parsing", fileA.name, "→", dateA.isValid() ? dateA.format("YYYY-MM-DD") : "INVALID");
 
         // Valid dates sort by date (newer first), invalid dates go to end
         const validA = dateA.isValid();
