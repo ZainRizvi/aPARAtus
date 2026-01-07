@@ -152,15 +152,13 @@ Use when you don't have the repo cloned or prefer CI:
 
 **Via CLI:**
 ```bash
-gh workflow run bump-version.yml -f bump=patch   # or minor, major
+gh workflow run bump-version.yml -f bump=patch              # stable release
+gh workflow run bump-version.yml -f bump=patch -f beta=true # beta release
 ```
 
 **Via GitHub UI:**
 1. Go to **Actions** → **Bump Version and Release** → **Run workflow**
-2. Select bump type:
-   - `patch` — Bug fixes (0.1.0 → 0.1.1)
-   - `minor` — New features (0.1.0 → 0.2.0)
-   - `major` — Breaking changes (0.1.0 → 1.0.0)
+2. Select bump type (patch/minor/major) and optionally check "beta"
 
 ### After First Community Plugin Acceptance
 
